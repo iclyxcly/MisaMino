@@ -97,7 +97,13 @@
 				#pragma comment(lib,"graphics.lib")
 			#endif
 		#else
-			#if (_MSC_VER >= 1700)
+				#if (_MSC_VER >= 1900)
+				#if 0 && defined(_DLL)
+				#pragma comment(lib,"graphics17d.lib")
+				#else
+				#pragma comment(lib,"graphics17.lib")
+				#endif
+				#elif (_MSC_VER >= 1600)
 				#if 0 && defined(_DLL)
 					#pragma comment(lib,"graphics12d.lib")
 				#else

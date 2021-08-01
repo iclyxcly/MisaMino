@@ -104,6 +104,14 @@ namespace AI {
             wallkick_spin = 0;
             return true;
         }
+        bool tryARRMove(int dx) {
+            if (m_state != STATE_MOVING) return false;
+            if (m_pool.isCollide(m_cur_x + dx, m_cur_y, m_cur))
+                return false;
+            m_cur_x += dx;
+            wallkick_spin = 0;
+            return true;
+        }
         bool tryYMove(int dy) {
             if ( m_state != STATE_MOVING ) return false;
             if (m_pool.isCollide(m_cur_x, m_cur_y + dy, m_cur))

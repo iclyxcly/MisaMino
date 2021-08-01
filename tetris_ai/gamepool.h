@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include "tetris_gem.h"
+#include "tetris_setting.h"
 #ifdef XP_RELEASE
 #define AI_POOL_MAX_H 50
 #else
@@ -57,11 +58,6 @@ namespace AI {
             combo = 0;
             b2b = 0;
             m_hold = 0;
-#ifdef XP_RELEASE
-            m_pc_att = 6;
-#else
-            m_pc_att = 10;
-#endif
             m_w_mask = ( 1 << w ) - 1;
             for (int i = 0; i < AI_POOL_MAX_H; ++i) {
                 m_row[i] = 0;
@@ -277,45 +273,698 @@ namespace AI {
         }
         int getAttack( int clearfull, signed char wallkick ) {
             int attack = 0;
-            if ( clearfull > 1 ) {
-                if ( clearfull < 4 ) {
-                    attack = clearfull - 1;
-                } else {
-                    attack = clearfull;
-                    if ( b2b > 1 ) attack += 1;
+            if (TETRIO_ATTACK_TABLE) {
+                m_pc_att = 10;
+                if (clearfull == 2) {
+                    if (combo > 2 && combo < 5) {
+                        attack -= 1;
+                    }
+                    if (combo > 6 && combo < 9) {
+                        attack -= 1;
+                    }
+                    if (combo > 12) {
+                        attack += 1;
+                    }
+                    if (combo > 20) {
+                        attack += 1;
+                    }
+                    attack += 1;
+                }
+                if (clearfull == 3) {
+                    if (combo > 4) {
+                        attack += 1;
+                    }
+                    if (combo > 8) {
+                        attack += 1;
+                    }
+                    if (combo > 10) {
+                        attack += 1;
+                    }
+                    if (combo > 12) {
+                        attack += 1;
+                    }
+                    if (combo > 14) {
+                        attack += 1;
+                    }
+                    if (combo > 18) {
+                        attack += 1;
+                    }
+                    if (combo > 20) {
+                        attack += 1;
+                    }
+                    attack += 2;
+                }
+                if (clearfull == 4) {
+                    if (b2b == 1) {
+                        if (combo == 1)attack += 4;
+                        if (combo == 2)attack += 5;
+                        if (combo == 3)attack += 5;
+                        if (combo == 4)attack += 6;
+                        if (combo == 5)attack += 7;
+                        if (combo == 6)attack += 8;
+                        if (combo == 7)attack += 8;
+                        if (combo == 8)attack += 9;
+                        if (combo == 9)attack += 10;
+                        if (combo == 10)attack += 11;
+                        if (combo == 11)attack += 12;
+                        if (combo == 12)attack += 13;
+                        if (combo == 13)attack += 14;
+                        if (combo == 14)attack += 15;
+                        if (combo == 15)attack += 16;
+                        if (combo == 16)attack += 17;
+                        if (combo == 17)attack += 17;
+                        if (combo == 18)attack += 18;
+                        if (combo == 19)attack += 19;
+                        if (combo == 20)attack += 20;
+                        if (combo == 21)attack += 21;
+                        if (combo == 22)attack += 22;
+                    }
+                    if (b2b > 1 && b2b < 4) {
+                        if (combo == 1)attack += 5;
+                        if (combo == 2)attack += 6;
+                        if (combo == 3)attack += 6;
+                        if (combo == 4)attack += 7;
+                        if (combo == 5)attack += 9;
+                        if (combo == 6)attack += 10;
+                        if (combo == 7)attack += 10;
+                        if (combo == 8)attack += 11;
+                        if (combo == 9)attack += 13;
+                        if (combo == 10)attack += 14;
+                        if (combo == 11)attack += 15;
+                        if (combo == 12)attack += 16;
+                        if (combo == 13)attack += 18;
+                        if (combo == 14)attack += 19;
+                        if (combo == 15)attack += 20;
+                        if (combo == 16)attack += 21;
+                        if (combo == 17)attack += 22;
+                        if (combo == 18)attack += 23;
+                        if (combo == 19)attack += 24;
+                        if (combo == 20)attack += 25;
+                        if (combo == 21)attack += 27;
+                        if (combo == 22)attack += 28;
+                    }
+                    if (b2b > 3 && b2b < 8) {
+                        if (combo == 1)attack += 6;
+                        if (combo == 2)attack += 7;
+                        if (combo == 3)attack += 8;
+                        if (combo == 4)attack += 9;
+                        if (combo == 5)attack += 11;
+                        if (combo == 6)attack += 12;
+                        if (combo == 7)attack += 13;
+                        if (combo == 8)attack += 14;
+                        if (combo == 9)attack += 16;
+                        if (combo == 10)attack += 17;
+                        if (combo == 11)attack += 19;
+                        if (combo == 12)attack += 20;
+                        if (combo == 13)attack += 22;
+                        if (combo == 14)attack += 23;
+                        if (combo == 15)attack += 25;
+                        if (combo == 16)attack += 26;
+                        if (combo == 17)attack += 27;
+                        if (combo == 18)attack += 28;
+                        if (combo == 19)attack += 30;
+                        if (combo == 20)attack += 31;
+                        if (combo == 21)attack += 33;
+                        if (combo == 22)attack += 34;
+                    }
+                    if (b2b > 7 && b2b < 24) {
+                        if (combo == 1)attack += 7;
+                        if (combo == 2)attack += 8;
+                        if (combo == 3)attack += 9;
+                        if (combo == 4)attack += 11;
+                        if (combo == 5)attack += 13;
+                        if (combo == 6)attack += 14;
+                        if (combo == 7)attack += 15;
+                        if (combo == 8)attack += 17;
+                        if (combo == 9)attack += 19;
+                        if (combo == 10)attack += 20;
+                        if (combo == 11)attack += 22;
+                        if (combo == 12)attack += 24;
+                        if (combo == 13)attack += 26;
+                        if (combo == 14)attack += 27;
+                        if (combo == 15)attack += 29;
+                        if (combo == 16)attack += 31;
+                        if (combo == 17)attack += 32;
+                        if (combo == 18)attack += 33;
+                        if (combo == 19)attack += 35;
+                        if (combo == 20)attack += 37;
+                        if (combo == 21)attack += 39;
+                        if (combo == 22)attack += 40;
+                    }
+                    if (b2b > 23) {
+                        if (combo == 1)attack += 8;
+                        if (combo == 2)attack += 10;
+                        if (combo == 3)attack += 11;
+                        if (combo == 4)attack += 13;
+                        if (combo == 5)attack += 15;
+                        if (combo == 6)attack += 17;
+                        if (combo == 7)attack += 18;
+                        if (combo == 8)attack += 20;
+                        if (combo == 9)attack += 22;
+                        if (combo == 10)attack += 24;
+                        if (combo == 11)attack += 26;
+                        if (combo == 12)attack += 28;
+                        if (combo == 13)attack += 30;
+                        if (combo == 14)attack += 32;
+                        if (combo == 15)attack += 34;
+                        if (combo == 16)attack += 36;
+                        if (combo == 17)attack += 37;
+                        if (combo == 18)attack += 39;
+                        if (combo == 19)attack += 41;
+                        if (combo == 20)attack += 43;
+                        if (combo == 21)attack += 45;
+                        if (combo == 22)attack += 47;
+                    }
+                };
+                if (clearfull > 0) {
+                    if (wallkick) {
+                        if (isEnableAllSpin()) {
+                            attack += clearfull + 1;
+                            if (wallkick == 2) { // mini
+                                attack -= 1; // mini minus
+                            }
+                        }
+                        else {
+                            if (clearfull == 1) {
+                                if (wallkick == 2) { // TSPIN MINI
+                                    if (b2b > 1 && b2b < 4) {
+                                        if (combo > 0 && combo < 3)attack += 1;
+                                        if (combo > 5 && combo < 9)attack += 1;
+                                        if (combo > 8 && combo < 13)attack += 1;
+                                        if (combo > 12 && combo < 17)attack += 2;
+                                        if (combo > 20)attack += 3;
+                                    }
+                                    if (b2b > 3 && b2b < 8) {
+                                        if (combo > 0 && combo < 5)attack += 2;
+                                        if (combo > 4 && combo < 7)attack += 3;
+                                        if (combo > 8 && combo < 11)attack += 4;
+                                        if (combo > 10 && combo < 13)attack += 5;
+                                        if (combo > 12 && combo < 15)attack += 6;
+                                        if (combo > 14 && combo < 19)attack += 7;
+                                        if (combo > 18 && combo < 21)attack += 8;
+                                        if (combo > 20)attack += 9;
+                                    }
+                                    if (b2b > 7 && b2b < 24) {
+                                        if (combo == 1)attack += 3;
+                                        if (combo == 2)attack += 3;
+                                        if (combo == 3)attack += 3;
+                                        if (combo == 4)attack += 4;
+                                        if (combo == 5)attack += 5;
+                                        if (combo == 6)attack += 5;
+                                        if (combo == 7)attack += 5;
+                                        if (combo == 8)attack += 6;
+                                        if (combo == 9)attack += 7;
+                                        if (combo == 10)attack += 7;
+                                        if (combo == 11)attack += 8;
+                                        if (combo == 12)attack += 9;
+                                        if (combo == 13)attack += 10;
+                                        if (combo == 14)attack += 10;
+                                        if (combo == 15)attack += 11;
+                                        if (combo == 16)attack += 12;
+                                        if (combo == 17)attack += 12;
+                                        if (combo == 18)attack += 12;
+                                        if (combo == 19)attack += 13;
+                                        if (combo == 20)attack += 14;
+                                        if (combo == 21)attack += 15;
+                                        if (combo == 22)attack += 15;
+                                    }
+                                    if (b2b > 23) {
+                                        if (combo == 1)attack += 4;
+                                        if (combo == 2)attack += 5;
+                                        if (combo == 3)attack += 5;
+                                        if (combo == 4)attack += 6;
+                                        if (combo == 5)attack += 7;
+                                        if (combo == 6)attack += 8;
+                                        if (combo == 7)attack += 8;
+                                        if (combo == 8)attack += 9;
+                                        if (combo == 9)attack += 10;
+                                        if (combo == 10)attack += 11;
+                                        if (combo == 11)attack += 12;
+                                        if (combo == 12)attack += 13;
+                                        if (combo == 13)attack += 14;
+                                        if (combo == 14)attack += 15;
+                                        if (combo == 15)attack += 16;
+                                        if (combo == 16)attack += 17;
+                                        if (combo == 17)attack += 17;
+                                        if (combo == 18)attack += 18;
+                                        if (combo == 19)attack += 19;
+                                        if (combo == 20)attack += 20;
+                                        if (combo == 21)attack += 21;
+                                        if (combo == 22)attack += 22;
+                                    }
+                                }
+                                else { //TSPIN SINGLE
+                                    if (b2b < 2) {
+                                        if (combo > 0 && combo < 5)attack += 2;
+                                        if (combo > 4 && combo < 7)attack += 3;
+                                        if (combo > 8 && combo < 11)attack += 4;
+                                        if (combo > 10 && combo < 13)attack += 5;
+                                        if (combo > 12 && combo < 15)attack += 6;
+                                        if (combo > 14 && combo < 19)attack += 7;
+                                        if (combo > 18 && combo < 21)attack += 8;
+                                        if (combo > 20)attack += 9;
+                                    }
+                                    if (b2b > 1 && b2b < 4) {
+                                        if (combo == 1)attack += 3;
+                                        if (combo == 2)attack += 3;
+                                        if (combo == 3)attack += 3;
+                                        if (combo == 4)attack += 4;
+                                        if (combo == 5)attack += 5;
+                                        if (combo == 6)attack += 5;
+                                        if (combo == 7)attack += 5;
+                                        if (combo == 8)attack += 6;
+                                        if (combo == 9)attack += 7;
+                                        if (combo == 10)attack += 7;
+                                        if (combo == 11)attack += 8;
+                                        if (combo == 12)attack += 9;
+                                        if (combo == 13)attack += 10;
+                                        if (combo == 14)attack += 10;
+                                        if (combo == 15)attack += 11;
+                                        if (combo == 16)attack += 12;
+                                        if (combo == 17)attack += 12;
+                                        if (combo == 18)attack += 12;
+                                        if (combo == 19)attack += 13;
+                                        if (combo == 20)attack += 14;
+                                        if (combo == 21)attack += 15;
+                                        if (combo == 22)attack += 15;
+                                    }
+                                    if (b2b > 3 && b2b < 8) {
+                                        if (combo == 1)attack += 4;
+                                        if (combo == 2)attack += 5;
+                                        if (combo == 3)attack += 5;
+                                        if (combo == 4)attack += 6;
+                                        if (combo == 5)attack += 7;
+                                        if (combo == 6)attack += 8;
+                                        if (combo == 7)attack += 8;
+                                        if (combo == 8)attack += 9;
+                                        if (combo == 9)attack += 10;
+                                        if (combo == 10)attack += 11;
+                                        if (combo == 11)attack += 12;
+                                        if (combo == 12)attack += 13;
+                                        if (combo == 13)attack += 14;
+                                        if (combo == 14)attack += 15;
+                                        if (combo == 15)attack += 16;
+                                        if (combo == 16)attack += 17;
+                                        if (combo == 17)attack += 17;
+                                        if (combo == 18)attack += 18;
+                                        if (combo == 19)attack += 19;
+                                        if (combo == 20)attack += 20;
+                                        if (combo == 21)attack += 21;
+                                        if (combo == 22)attack += 22;
+                                    }
+                                    if (b2b > 7 && b2b < 24) {
+                                        if (combo == 1)attack += 5;
+                                        if (combo == 2)attack += 6;
+                                        if (combo == 3)attack += 6;
+                                        if (combo == 4)attack += 7;
+                                        if (combo == 5)attack += 9;
+                                        if (combo == 6)attack += 10;
+                                        if (combo == 7)attack += 10;
+                                        if (combo == 8)attack += 11;
+                                        if (combo == 9)attack += 13;
+                                        if (combo == 10)attack += 14;
+                                        if (combo == 11)attack += 15;
+                                        if (combo == 12)attack += 16;
+                                        if (combo == 13)attack += 18;
+                                        if (combo == 14)attack += 19;
+                                        if (combo == 15)attack += 20;
+                                        if (combo == 16)attack += 21;
+                                        if (combo == 17)attack += 22;
+                                        if (combo == 18)attack += 23;
+                                        if (combo == 19)attack += 24;
+                                        if (combo == 20)attack += 25;
+                                        if (combo == 21)attack += 27;
+                                        if (combo == 22)attack += 28;
+                                    }
+                                    if (b2b > 23) {
+                                        if (combo == 1)attack += 6;
+                                        if (combo == 2)attack += 7;
+                                        if (combo == 3)attack += 8;
+                                        if (combo == 4)attack += 9;
+                                        if (combo == 5)attack += 11;
+                                        if (combo == 6)attack += 12;
+                                        if (combo == 7)attack += 13;
+                                        if (combo == 8)attack += 14;
+                                        if (combo == 9)attack += 16;
+                                        if (combo == 10)attack += 17;
+                                        if (combo == 11)attack += 19;
+                                        if (combo == 12)attack += 20;
+                                        if (combo == 13)attack += 22;
+                                        if (combo == 14)attack += 23;
+                                        if (combo == 15)attack += 25;
+                                        if (combo == 16)attack += 26;
+                                        if (combo == 17)attack += 27;
+                                        if (combo == 18)attack += 28;
+                                        if (combo == 19)attack += 30;
+                                        if (combo == 20)attack += 31;
+                                        if (combo == 21)attack += 33;
+                                        if (combo == 22)attack += 34;
+                                    }
+                                }
+                            }
+                            else if (clearfull == 2) {  //TSPIN DOUBLE
+                                attack -= 1;//regular double attack removal
+                                //beginning of multiplier attack removal for regular double
+                                if (combo > 2 && combo < 5) {
+                                    attack += 1;
+                                }
+                                if (combo > 6 && combo < 9) {
+                                    attack += 1;
+                                }
+                                if (combo > 12) {
+                                    attack -= 1;
+                                }
+                                if (combo > 20) {
+                                    attack -= 1;
+                                }
+                                //end of multiplier removal
+                                if (b2b == 1) {
+                                    if (combo == 1)attack += 4;
+                                    if (combo == 2)attack += 5;
+                                    if (combo == 3)attack += 5;
+                                    if (combo == 4)attack += 6;
+                                    if (combo == 5)attack += 7;
+                                    if (combo == 6)attack += 8;
+                                    if (combo == 7)attack += 8;
+                                    if (combo == 8)attack += 9;
+                                    if (combo == 9)attack += 10;
+                                    if (combo == 10)attack += 11;
+                                    if (combo == 11)attack += 12;
+                                    if (combo == 12)attack += 13;
+                                    if (combo == 13)attack += 14;
+                                    if (combo == 14)attack += 15;
+                                    if (combo == 15)attack += 16;
+                                    if (combo == 16)attack += 17;
+                                    if (combo == 17)attack += 17;
+                                    if (combo == 18)attack += 18;
+                                    if (combo == 19)attack += 19;
+                                    if (combo == 20)attack += 20;
+                                    if (combo == 21)attack += 21;
+                                    if (combo == 22)attack += 22;
+                                }
+                                if (b2b > 1 && b2b < 4) {
+                                    if (combo == 1)attack += 5;
+                                    if (combo == 2)attack += 6;
+                                    if (combo == 3)attack += 6;
+                                    if (combo == 4)attack += 7;
+                                    if (combo == 5)attack += 9;
+                                    if (combo == 6)attack += 10;
+                                    if (combo == 7)attack += 10;
+                                    if (combo == 8)attack += 11;
+                                    if (combo == 9)attack += 13;
+                                    if (combo == 10)attack += 14;
+                                    if (combo == 11)attack += 15;
+                                    if (combo == 12)attack += 16;
+                                    if (combo == 13)attack += 18;
+                                    if (combo == 14)attack += 19;
+                                    if (combo == 15)attack += 20;
+                                    if (combo == 16)attack += 21;
+                                    if (combo == 17)attack += 22;
+                                    if (combo == 18)attack += 23;
+                                    if (combo == 19)attack += 24;
+                                    if (combo == 20)attack += 25;
+                                    if (combo == 21)attack += 27;
+                                    if (combo == 22)attack += 28;
+                                }
+                                if (b2b > 3 && b2b < 8) {
+                                    if (combo == 1)attack += 6;
+                                    if (combo == 2)attack += 7;
+                                    if (combo == 3)attack += 8;
+                                    if (combo == 4)attack += 9;
+                                    if (combo == 5)attack += 11;
+                                    if (combo == 6)attack += 12;
+                                    if (combo == 7)attack += 13;
+                                    if (combo == 8)attack += 14;
+                                    if (combo == 9)attack += 16;
+                                    if (combo == 10)attack += 17;
+                                    if (combo == 11)attack += 19;
+                                    if (combo == 12)attack += 20;
+                                    if (combo == 13)attack += 22;
+                                    if (combo == 14)attack += 23;
+                                    if (combo == 15)attack += 25;
+                                    if (combo == 16)attack += 26;
+                                    if (combo == 17)attack += 27;
+                                    if (combo == 18)attack += 28;
+                                    if (combo == 19)attack += 30;
+                                    if (combo == 20)attack += 31;
+                                    if (combo == 21)attack += 33;
+                                    if (combo == 22)attack += 34;
+                                }
+                                if (b2b > 7 && b2b < 24) {
+                                    if (combo == 1)attack += 7;
+                                    if (combo == 2)attack += 8;
+                                    if (combo == 3)attack += 9;
+                                    if (combo == 4)attack += 11;
+                                    if (combo == 5)attack += 13;
+                                    if (combo == 6)attack += 14;
+                                    if (combo == 7)attack += 15;
+                                    if (combo == 8)attack += 17;
+                                    if (combo == 9)attack += 19;
+                                    if (combo == 10)attack += 20;
+                                    if (combo == 11)attack += 22;
+                                    if (combo == 12)attack += 24;
+                                    if (combo == 13)attack += 26;
+                                    if (combo == 14)attack += 27;
+                                    if (combo == 15)attack += 29;
+                                    if (combo == 16)attack += 31;
+                                    if (combo == 17)attack += 32;
+                                    if (combo == 18)attack += 33;
+                                    if (combo == 19)attack += 35;
+                                    if (combo == 20)attack += 37;
+                                    if (combo == 21)attack += 39;
+                                    if (combo == 22)attack += 40;
+                                }
+                                if (b2b > 23) {
+                                    if (combo == 1)attack += 8;
+                                    if (combo == 2)attack += 10;
+                                    if (combo == 3)attack += 11;
+                                    if (combo == 4)attack += 13;
+                                    if (combo == 5)attack += 15;
+                                    if (combo == 6)attack += 17;
+                                    if (combo == 7)attack += 18;
+                                    if (combo == 8)attack += 20;
+                                    if (combo == 9)attack += 22;
+                                    if (combo == 10)attack += 24;
+                                    if (combo == 11)attack += 26;
+                                    if (combo == 12)attack += 28;
+                                    if (combo == 13)attack += 30;
+                                    if (combo == 14)attack += 32;
+                                    if (combo == 15)attack += 34;
+                                    if (combo == 16)attack += 36;
+                                    if (combo == 17)attack += 37;
+                                    if (combo == 18)attack += 39;
+                                    if (combo == 19)attack += 41;
+                                    if (combo == 20)attack += 43;
+                                    if (combo == 21)attack += 45;
+                                    if (combo == 22)attack += 47;
+                                }
+                            }
+                            if (clearfull == 3) {   //TSPIN TRIPLE
+                                attack -= 2;//regular triple attack removal
+                            //beginning of multiplier attack removal for regular triple
+                                if (combo > 4) {
+                                    attack -= 1;
+                                }
+                                if (combo > 8) {
+                                    attack -= 1;
+                                }
+                                if (combo > 10) {
+                                    attack -= 1;
+                                }
+                                if (combo > 12) {
+                                    attack -= 1;
+                                }
+                                if (combo > 14) {
+                                    attack -= 1;
+                                }
+                                if (combo > 18) {
+                                    attack -= 1;
+                                }
+                                if (combo > 20) {
+                                    attack -= 1;
+                                }
+                                //end of removal
+                                if (b2b == 1) {
+                                    if (combo == 1)attack += 6;
+                                    if (combo == 2)attack += 7;
+                                    if (combo == 3)attack += 8;
+                                    if (combo == 4)attack += 9;
+                                    if (combo == 5)attack += 11;
+                                    if (combo == 6)attack += 12;
+                                    if (combo == 7)attack += 13;
+                                    if (combo == 8)attack += 14;
+                                    if (combo == 9)attack += 16;
+                                    if (combo == 10)attack += 17;
+                                    if (combo == 11)attack += 19;
+                                    if (combo == 12)attack += 20;
+                                    if (combo == 13)attack += 22;
+                                    if (combo == 14)attack += 23;
+                                    if (combo == 15)attack += 25;
+                                    if (combo == 16)attack += 26;
+                                    if (combo == 17)attack += 27;
+                                    if (combo == 18)attack += 28;
+                                    if (combo == 19)attack += 30;
+                                    if (combo == 20)attack += 31;
+                                    if (combo == 21)attack += 33;
+                                    if (combo == 22)attack += 34;
+                                }
+                                if (b2b > 1 && b2b < 4) {
+                                    if (combo == 1)attack += 7;
+                                    if (combo == 2)attack += 8;
+                                    if (combo == 3)attack += 9;
+                                    if (combo == 4)attack += 11;
+                                    if (combo == 5)attack += 13;
+                                    if (combo == 6)attack += 14;
+                                    if (combo == 7)attack += 15;
+                                    if (combo == 8)attack += 17;
+                                    if (combo == 9)attack += 19;
+                                    if (combo == 10)attack += 20;
+                                    if (combo == 11)attack += 22;
+                                    if (combo == 12)attack += 24;
+                                    if (combo == 13)attack += 26;
+                                    if (combo == 14)attack += 27;
+                                    if (combo == 15)attack += 29;
+                                    if (combo == 16)attack += 31;
+                                    if (combo == 17)attack += 32;
+                                    if (combo == 18)attack += 33;
+                                    if (combo == 19)attack += 35;
+                                    if (combo == 20)attack += 37;
+                                    if (combo == 21)attack += 39;
+                                    if (combo == 22)attack += 40;
+                                }
+                                if (b2b > 3 && b2b < 8) {
+                                    if (combo == 1)attack += 8;
+                                    if (combo == 2)attack += 10;
+                                    if (combo == 3)attack += 11;
+                                    if (combo == 4)attack += 13;
+                                    if (combo == 5)attack += 15;
+                                    if (combo == 6)attack += 17;
+                                    if (combo == 7)attack += 18;
+                                    if (combo == 8)attack += 20;
+                                    if (combo == 9)attack += 22;
+                                    if (combo == 10)attack += 24;
+                                    if (combo == 11)attack += 26;
+                                    if (combo == 12)attack += 28;
+                                    if (combo == 13)attack += 30;
+                                    if (combo == 14)attack += 32;
+                                    if (combo == 15)attack += 34;
+                                    if (combo == 16)attack += 36;
+                                    if (combo == 17)attack += 37;
+                                    if (combo == 18)attack += 39;
+                                    if (combo == 19)attack += 41;
+                                    if (combo == 20)attack += 43;
+                                    if (combo == 21)attack += 45;
+                                    if (combo == 22)attack += 47;
+                                }
+                                if (b2b > 7 && b2b < 24) {
+                                    if (combo == 1)attack += 9;
+                                    if (combo == 2)attack += 11;
+                                    if (combo == 3)attack += 12;
+                                    if (combo == 4)attack += 14;
+                                    if (combo == 5)attack += 17;
+                                    if (combo == 6)attack += 19;
+                                    if (combo == 7)attack += 20;
+                                    if (combo == 8)attack += 22;
+                                    if (combo == 9)attack += 25;
+                                    if (combo == 10)attack += 27;
+                                    if (combo == 11)attack += 29;
+                                    if (combo == 12)attack += 31;
+                                    if (combo == 13)attack += 34;
+                                    if (combo == 14)attack += 36;
+                                    if (combo == 15)attack += 38;
+                                    if (combo == 16)attack += 40;
+                                    if (combo == 17)attack += 42;
+                                    if (combo == 18)attack += 44;
+                                    if (combo == 19)attack += 46;
+                                    if (combo == 20)attack += 48;
+                                    if (combo == 21)attack += 51;
+                                    if (combo == 22)attack += 53;
+                                }
+                                if (b2b > 23) {
+                                    if (combo == 1)attack += 10;
+                                    if (combo == 2)attack += 12;
+                                    if (combo == 3)attack += 14;
+                                    if (combo == 4)attack += 16;
+                                    if (combo == 5)attack += 19;
+                                    if (combo == 6)attack += 21;
+                                    if (combo == 7)attack += 23;
+                                    if (combo == 8)attack += 25;
+                                    if (combo == 9)attack += 28;
+                                    if (combo == 10)attack += 30;
+                                    if (combo == 11)attack += 33;
+                                    if (combo == 12)attack += 35;
+                                    if (combo == 13)attack += 38;
+                                    if (combo == 14)attack += 40;
+                                    if (combo == 15)attack += 43;
+                                    if (combo == 16)attack += 45;
+                                    if (combo == 17)attack += 47;
+                                    if (combo == 18)attack += 49;
+                                    if (combo == 19)attack += 52;
+                                    if (combo == 20)attack += 54;
+                                    if (combo == 21)attack += 57;
+                                    if (combo == 22)attack += 59;
+                                }
+                            }
+                        }
+                    }
+                    attack += getComboAttack(combo);
+                    {
+                        int i = gem_add_y + m_h;
+                        for (; i >= 0; --i) {
+                            if (m_row[i]) break;
+                        }
+                        if (i < 0) {
+                            attack += m_pc_att; // pc
+                        }
+                    }
                 }
             }
-            if ( clearfull > 0 ) {
-                if ( wallkick ) {
-                    if ( isEnableAllSpin() ) {
-                        attack += clearfull + 1;
-                        if ( wallkick == 2 ) { // mini
-                            attack -= 1; // mini minus
-                        }
-                    } else {
-                        if ( b2b > 1 ) attack += 1;
-                        if ( clearfull == 1 ) {
-                            if ( wallkick == 2 ) { // mini
-                                attack += 1;
-                            } else {
-                                attack += 2;
-                            }
-                        } else {
-                            attack += clearfull + 1;
-                        }
-                        if ( clearfull == 3 ) {
-                            if ( b2b > 1 ) attack += 1;
-                        }
+            else {
+                m_pc_att = 6;
+                if (clearfull > 1) {
+                    if (clearfull < 4) {
+                        attack = clearfull - 1;
+                    }
+                    else {
+                        attack = clearfull;
+                        if (b2b > 1) attack += 1;
                     }
                 }
-                attack += getComboAttack( combo );
-                {
-                    int i = gem_add_y + m_h;
-                    for ( ; i >= 0; --i ) {
-                        if ( m_row[i] ) break;
+                if (clearfull > 0) {
+                    if (wallkick) {
+                        if (isEnableAllSpin()) {
+                            attack += clearfull + 1;
+                            if (wallkick == 2) { // mini
+                                attack -= 1; // mini minus
+                            }
+                        }
+                        else {
+                            if (b2b > 1) attack += 1;
+                            if (clearfull == 1) {
+                                if (wallkick == 2) { // mini
+                                    attack += 1;
+                                }
+                                else {
+                                    attack += 2;
+                                }
+                            }
+                            else {
+                                attack += clearfull + 1;
+                            }
+                            if (clearfull == 3) {
+                                if (b2b > 1) attack += 1;
+                            }
+                        }
                     }
-                    if ( i < 0 ) {
-                        attack += m_pc_att; // pc
+                    attack += getComboAttack(combo);
+                    {
+                        int i = gem_add_y + m_h;
+                        for (; i >= 0; --i) {
+                            if (m_row[i]) break;
+                        }
+                        if (i < 0) {
+                            attack += m_pc_att; // pc
+                        }
                     }
                 }
             }

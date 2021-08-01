@@ -544,6 +544,7 @@ struct tetris_rule {
 struct tetris_player {
     int tojsoftdrop;
     int das;
+    int arr;
     int softdropdelay;
     int softdropdas;
     int sound_p1;
@@ -551,7 +552,8 @@ struct tetris_player {
     int sound_bgm;
     tetris_player() {
         tojsoftdrop = 1;
-        das = 8;
+        das = 5;
+        arr = 1;
         softdropdelay = 10;
         softdropdas = 10;
         sound_p1 = 1;
@@ -620,6 +622,10 @@ void loadPlayerSetting(CProfile& config, tetris_player& player) {
     if ( config.IsInteger( "das" ) ) {
         player.das = config.ReadInteger( "das" );
         if ( player.das < 0 ) player.das = 0;
+    }
+    if (config.IsInteger("arr")) {
+        player.arr = config.ReadInteger("arr");
+        if (player.arr < 0) player.arr = 0;
     }
     if ( config.IsInteger( "softdropdas" ) ) {
         player.softdropdas = config.ReadInteger( "softdropdas" );
@@ -938,7 +944,12 @@ void mainscene() {
             AI::setAIsettings(i, "4w", 1);
         }
     }
-    if ( rule.combo_table_style == 0 )
+    if (TETRIO_ATTACK_TABLE)
+    {
+        int a[] = { 0,0,0,1,1,1,1,2,2,2,2,2,2,2,2,2,2,3 };
+        AI::setComboList(std::vector<int>(a, a + sizeof(a) / sizeof(*a)));
+    }
+    else if ( rule.combo_table_style == 0 )
     {
         int a[] = {0,0,0,1,1,2};
         AI::setComboList( std::vector<int>(a, a + sizeof(a)/sizeof(*a)) );
@@ -1217,14 +1228,16 @@ void mainscene() {
                                 if ( ! move && player.softdropdelay <= 0) break;
                                 player_key_state[i] -= player.softdropdelay;
                             }
-                        } else if ( player_key_state[i] > player.das + 1 ) {
-                            if ( i == 0 ) {
-                                tetris[0].tryXXMove(-1);
-                            } else if ( i == 1 ) {
-                                tetris[0].tryXXMove( 1) ;
-                            } else if ( i == 2 ) {
-                                tetris[0].tryYYMove( 1) ;
-                            }
+                        } else if ( player_key_state[i] > player.das + 1 + (player.arr + 1)) {
+                            bool move;
+                                if (i == 0) {
+                                    move = tetris[0].tryARRMove(-1);
+                                }
+                                if (i == 1) {
+                                    move = tetris[0].tryARRMove(1);
+                                }
+                                if (!move && player.arr <= 0) break;
+                                player_key_state[i] -= player.arr;
                         }
                     }
                 }
