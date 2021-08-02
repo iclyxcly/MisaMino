@@ -14,7 +14,6 @@
 #endif
 #define ATTACK_MODE         1 // 垃圾行：0空气 1TOP 2火拼
 #define AI_SHOW             0 // 不相互攻击，围观AI
-#define DISPLAY_NEXT_NUM    6 // 显示next个数
 #if AI_TRAINING_SLOW
 #define AI_TRAINING_DEEP    16
 #else

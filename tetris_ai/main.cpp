@@ -12,6 +12,7 @@
 int enable_autostart = 0;
 int autostart_interval = 0;
 int count = 0;
+int next = 0;
 
 PIMAGE colorCell( int w, int h, color_t normal, color_t lt, color_t rb ) {
     PIMAGE img;
@@ -95,10 +96,10 @@ void tetris_draw_next(const TetrisGame& tetris, PIMAGE* gem) {
         rectangle(bx - i,
             by - i,
             int(bx + tetris.m_size.x * 4) + i,
-            int(by + tetris.m_size.y * 3 * DISPLAY_NEXT_NUM) + i
+            int(by + tetris.m_size.y * 3 * next) + i
             );
     }
-    for ( int n = 0; n < DISPLAY_NEXT_NUM; ++n) {
+    for ( int n = 0; n < next; ++n) {
         for ( int y = 0; y < 4; ++y) {
             for ( int x = 0; x < 4; ++x) {
                 if (tetris.getNextGemCell(n, x, y)) {
@@ -601,6 +602,10 @@ void loadRule(CProfile& config, tetris_rule& rule) {
         if (turns < 1 && rule.turnbase > 0)turns = 1;
         rule.turn = turns;
     }
+    if (config.IsInteger("next")) {
+        next = config.ReadInteger("next");
+        if (next < 0)next = 0;
+    }
     if ( config.IsInteger( "spin180" ) ) {
         rule.spin180 = config.ReadInteger( "spin180" );
         AI::setSpin180( rule.spin180 );
@@ -754,7 +759,7 @@ void mainscene() {
 #endif
 #ifdef XP_RELEASE
     int ai_eve = 0;
-    int ai_search_height_deep = DISPLAY_NEXT_NUM > 6 ? 6 : DISPLAY_NEXT_NUM;
+    int ai_search_height_deep = next > 6 ? 6 : next;
     int player_stratagy_mode = !AI_SHOW;
     int mainloop_times = 1;
     int normal_delay = 1;
@@ -1267,7 +1272,17 @@ void mainscene() {
                                 if ( ! move && player.softdropdelay <= 0) break;
                                 player_key_state[i] -= player.softdropdelay;
                             }
-                        } else if ( player_key_state[i] > player.das + 1 + (player.arr + 1)) {
+                        } else if (player.arr == 0 && player_key_state[i] > player.das + 1) {
+                            if (i == 0) {
+                                tetris[0].tryXXMove(-1);
+                            }
+                            else if (i == 1) {
+                                tetris[0].tryXXMove(1);
+                            }
+                            else if (i == 2) {
+                                tetris[0].tryYYMove(1);
+                            }
+                        }else if ( player_key_state[i] > player.das + 1 + (player.arr + 1)) {
                             bool move;
                                 if (i == 0) {
                                     move = tetris[0].tryARRMove(-1);
@@ -1275,7 +1290,6 @@ void mainscene() {
                                 if (i == 1) {
                                     move = tetris[0].tryARRMove(1);
                                 }
-                                if (!move && player.arr <= 0) break;
                                 player_key_state[i] -= player.arr;
                         }
                     }
