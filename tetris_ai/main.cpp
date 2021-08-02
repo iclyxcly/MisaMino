@@ -9,6 +9,9 @@
 #include "profile.h"
 #include <map>
 
+int enable_autostart = 0;
+int autostart_interval = 0;
+int count = 0;
 
 PIMAGE colorCell( int w, int h, color_t normal, color_t lt, color_t rb ) {
     PIMAGE img;
@@ -367,8 +370,12 @@ void tetris_draw(const TetrisGame& tetris, bool showAttackLine, bool showGrid) {
             tetris.m_att_info.c_str() );
     }
     setcolor (EGERGB(0xa0, 0xa0, 0xa0));
-    if ( ! tetris.alive() ) {
-        xyprintf(0, 0, "Press F2 to restart a new game. Press F12 to config your controls");
+    if (!tetris.alive()) {
+        if (enable_autostart == 1 && count > 0) {
+            xyprintf(0, 0, "Next game will start in %d seconds", autostart_interval / 1000);
+        }else{
+            xyprintf(0, 0, "Press F2 to restart a new game. Press F12 to config your controls");
+        }
     }
     {
         int w = textwidth(tetris.m_name.c_str());
@@ -523,6 +530,7 @@ struct tetris_rule {
     int turnbase;
     int garbage;
     int spin180;
+    int InfinityHold;
     int GarbageCancel;
     int GarbageBuffer;
     int GarbageBlocking;
@@ -533,6 +541,7 @@ struct tetris_rule {
         turnbase = 1;
         garbage = 0;
         spin180 = 0;
+        InfinityHold = 0;
         GarbageCancel = 1;
         GarbageBuffer = 1;
         GarbageBlocking = 1;
@@ -587,13 +596,18 @@ void loadRule(CProfile& config, tetris_rule& rule) {
     if ( config.IsInteger( "turnbase" ) ) {
         rule.turnbase = config.ReadInteger( "turnbase" );
     }
-    if ( config.IsInteger( "KOS_turnbase" ) ) {
-        int kos_turnbase = config.ReadInteger( "KOS_turnbase" );
-        if ( kos_turnbase ) rule.turn = 7;
+    if ( config.IsInteger( "turn" ) ) {
+        int turns = config.ReadInteger( "turn" );
+        if (turns < 1 && rule.turnbase > 0)turns = 1;
+        rule.turn = turns;
     }
     if ( config.IsInteger( "spin180" ) ) {
         rule.spin180 = config.ReadInteger( "spin180" );
         AI::setSpin180( rule.spin180 );
+    }
+    if (config.IsInteger("InfinityHold")) {
+        rule.InfinityHold = config.ReadInteger("InfinityHold");
+        if (rule.InfinityHold > 1)rule.InfinityHold = 1;
     }
     if ( config.IsInteger( "GarbageStyle" ) ) {
         rule.garbage = config.ReadInteger( "GarbageStyle" );
@@ -669,7 +683,7 @@ void mainscene() {
 #if !defined( XP_RELEASE ) || P1_AI || !PUBLIC_VERSION
     config.SetFile( "tetris_ai.ini" );
 #else
-    config.SetFile( "misamino.ini" );
+    config.SetFile( "settings.ini" ); // i changed the file name because some people are confused where the settings is
 #endif
     if ( 0 )
     {
@@ -692,6 +706,15 @@ void mainscene() {
         }
         if ( config.IsInteger( "4w" ) ) {
             ai_4w = config.ReadInteger( "4w" );
+        }
+        if (config.IsInteger("enable_autostart")) {
+            enable_autostart = config.ReadInteger("enable_autostart");
+            if (enable_autostart < 0) enable_autostart = 0;
+            if (enable_autostart > 1) enable_autostart = 1;
+        }
+        if (config.IsInteger("autostart_interval")) {
+            autostart_interval = config.ReadInteger("autostart_interval") * 1000;
+            if (autostart_interval < 0) autostart_interval = 0;
         }
 
         loadAI(config, ai);
@@ -1097,6 +1120,16 @@ void mainscene() {
                     }
                     //GameSound::ins().stopBGM();
                     if ( player.sound_bgm ) GameSound::ins().loadBGM_wait( rnd );
+                    if (enable_autostart == 1) {
+                        Sleep(autostart_interval);
+                        int seed = (unsigned)time(0), pass = rnd.randint(1024);
+                        for (int i = 0; i < players_num; ++i) {
+                            tetris[i].reset(seed ^ ((!rule.samesequence) * i * 255), pass);
+                            onGameStart(tetris[i], rnd, i);
+                            tetris[i].acceptAttack(player_begin_attack);
+                        }
+                        if (player.sound_bgm) GameSound::ins().loadBGM(rnd);
+                    }
                 }
                 lastGameState = -1;
             }
@@ -1165,7 +1198,12 @@ void mainscene() {
                         player_key_state[4] = 1;
                     }
                     if ( k.key == player_keys[5] && player_key_state[5] == 0 ) {
-                        tetris[0].tryHold();
+                        if (rule.InfinityHold == 1) {
+                            tetris[0].tryInfinityHold();
+                        }
+                        else {
+                            tetris[0].tryHold();
+                        }
                         player_key_state[5] = 1;
                     }
                     if ( k.key == player_keys[6] && player_key_state[6] == 0 ) {
@@ -1187,6 +1225,7 @@ void mainscene() {
                                 //tetris[i].reset( (unsigned)time(0) + ::GetTickCount() * i );
                                 onGameStart( tetris[i], rnd, i );
                                 tetris[i].acceptAttack(player_begin_attack);
+                                ++count;
                             }
                             if ( player.sound_bgm ) GameSound::ins().loadBGM( rnd );
                         }
@@ -1417,7 +1456,12 @@ void mainscene() {
                             else if (mov == AI::Moving::MOV_DD) tetris[i].tryYYMove( 1) ;
                             else if (mov == AI::Moving::MOV_DROP) tetris[i].drop();
                             else if (mov == AI::Moving::MOV_HOLD) {
-                                tetris[i].tryHold();
+                                if (rule.InfinityHold == 1) {
+                                    tetris[i].tryInfinityHold();
+                                }
+                                else {
+                                    tetris[i].tryHold();
+                                }
                             } else if (mov == AI::Moving::MOV_SPIN2) {
                                 if ( AI::spin180Enable() ) {
                                     tetris[i].trySpin180();

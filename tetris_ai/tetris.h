@@ -18,7 +18,7 @@ namespace AI {
 
     class Tetris {
     public:
-        enum {
+        enum s{
             STATE_INIT,
             STATE_READY,
             STATE_MOVING,
@@ -165,6 +165,28 @@ namespace AI {
                 m_cur = AI::getGem(hold, 0);
             }
             if ( m_pool.isCollide(m_cur_x, m_cur_y, m_cur)) {
+                m_state = STATE_OVER;
+                return true;
+            }
+            return true;
+        }
+        bool tryInfinityHold() {
+            if (m_state != STATE_MOVING) return false;
+            m_hold = true;
+            int hold = m_pool.m_hold;
+            m_pool.m_hold = m_cur.num;
+            if (hold == 0) {
+                m_cur_x = AI::gem_beg_x;
+                m_cur_y = AI::gem_beg_y;
+                m_cur = AI::getGem(m_next[0].num, 0);
+                removeNext();
+            }
+            else {
+                m_cur_x = AI::gem_beg_x;
+                m_cur_y = AI::gem_beg_y;
+                m_cur = AI::getGem(hold, 0);
+            }
+            if (m_pool.isCollide(m_cur_x, m_cur_y, m_cur)) {
                 m_state = STATE_OVER;
                 return true;
             }

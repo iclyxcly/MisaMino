@@ -184,6 +184,13 @@ public:
         }
         return ret;
     }
+    bool tryInfinityHold() {
+        bool ret = Tetris::tryInfinityHold();
+        if (mSFXon && ret) {
+            GameSound::ins().mSFX_hold.play(m_lr);
+        }
+        return ret;
+    }
     bool drop() {
         bool ret = Tetris::drop( );
         if ( mSFXon && ret ) {
