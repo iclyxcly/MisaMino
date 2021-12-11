@@ -1214,8 +1214,8 @@ void mainscene() {
                         tetris[0].trySpin180();
                         player_key_state[7] = 1;
                     }
-                    if (done_pupu == true) {
-                        if (!tetris[0].alive() || !tetris[1].alive() && enable_autostart == 1) {
+                    if (done_pupu == true && enable_autostart == 1) {
+                        if (!tetris[0].alive() || !tetris[1].alive()) {
                             Sleep(autostart_interval);
                             int seed = (unsigned)time(0), pass = rnd.randint(1024);
                             for (int i = 0; i < players_num; ++i) {
