@@ -13,6 +13,7 @@ int enable_autostart = 0;
 int autostart_interval = 0;
 int count = 0;
 int next = 0;
+bool done_pupu = false;
 
 PIMAGE colorCell( int w, int h, color_t normal, color_t lt, color_t rb ) {
     PIMAGE img;
@@ -1116,6 +1117,7 @@ void mainscene() {
                 lastGameState = 0;
             } else {
                 if ( lastGameState == 0 ) {
+                    done_pupu = true;
                     if ( tetris[1].alive() ) {
                         tetris[0].ko();
                         tetris[1].n_win++;
@@ -1125,16 +1127,6 @@ void mainscene() {
                     }
                     //GameSound::ins().stopBGM();
                     if ( player.sound_bgm ) GameSound::ins().loadBGM_wait( rnd );
-                    if (enable_autostart == 1) {
-                        Sleep(autostart_interval);
-                        int seed = (unsigned)time(0), pass = rnd.randint(1024);
-                        for (int i = 0; i < players_num; ++i) {
-                            tetris[i].reset(seed ^ ((!rule.samesequence) * i * 255), pass);
-                            onGameStart(tetris[i], rnd, i);
-                            tetris[i].acceptAttack(player_begin_attack);
-                        }
-                        if (player.sound_bgm) GameSound::ins().loadBGM(rnd);
-                    }
                 }
                 lastGameState = -1;
             }
@@ -1221,6 +1213,18 @@ void mainscene() {
                     if ( k.key == player_keys[7] && player_key_state[7] == 0 && AI::spin180Enable() ) {
                         tetris[0].trySpin180();
                         player_key_state[7] = 1;
+                    }
+                    if (done_pupu == true) {
+                        if (!tetris[0].alive() || !tetris[1].alive() && enable_autostart == 1) {
+                            Sleep(autostart_interval);
+                            int seed = (unsigned)time(0), pass = rnd.randint(1024);
+                            for (int i = 0; i < players_num; ++i) {
+                                tetris[i].reset(seed ^ ((!rule.samesequence) * i * 255), pass);
+                                onGameStart(tetris[i], rnd, i);
+                                tetris[i].acceptAttack(player_begin_attack);
+                            }
+                            if (player.sound_bgm) GameSound::ins().loadBGM(rnd);
+                        }
                     }
                     if ( k.key == key_f2 ) {
                         if ( !tetris[0].alive() || !tetris[1].alive() || tetris[0].n_pieces <= 20 ) {
