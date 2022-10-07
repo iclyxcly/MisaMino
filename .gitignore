@@ -32,3 +32,5 @@
 *.recipe
 *.res
 *.aps
+*.vsidx
+*.lock
