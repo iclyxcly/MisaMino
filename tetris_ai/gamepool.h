@@ -305,7 +305,7 @@ namespace AI {
                     if (clearfull <= 3 && !wallkick)
                         attack += normalatk[clearfull - 1][combo - 1];
                     else if (clearfull == 4 && !wallkick) {
-                        attack += b2b > 1 && b2b < 4 ? b2blv1atk[1][combo - 1] : b2b>3 && b2b < 8 ? b2blv2atk[1][combo - 1] : b2b > 7 && b2b < 24 ? b2blv3atk[1][combo - 1] : b2b > 23 ? b2blv4atk[1][combo - 1] : advattack[clearfull - 1][combo - 1];
+                        attack += b2b > 1 && b2b < 4 ? b2blv1atk[1][combo - 1] : b2b>3 && b2b < 8 ? b2blv2atk[1][combo - 1] : b2b > 7 && b2b < 24 ? b2blv3atk[1][combo - 1] : b2b > 23 ? b2blv4atk[1][combo - 1] : advattack[1][combo - 1];
                     }
                     else
                     if (wallkick) {
