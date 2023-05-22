@@ -313,7 +313,7 @@ void tetris_draw(const TetrisGame& tetris, bool showAttackLine, bool showGrid) {
 #endif
             );
     }
-    if ( tetris.m_clear_info.attack > 0 ) {
+    if ( tetris.m_clear_info.attack > 0|| (TETRIO_ATTACK_TABLE && tetris.m_clear_info.clears == 1 && tetris.m_clear_info.wallkick_spin == 2) ) {
         std::string info;
         char str[128];
         int att = tetris.m_clear_info.attack;
@@ -785,7 +785,7 @@ void mainscene() {
         (AI_SHOW ) ? ( GAMEMODE_4W ? 2: 16 ) : ( PLAYER_WAIT ? 2 : 10 ) )
         );
     ai_mov_time /= 2; // fps=60
-    int ai_mov_time_base = 13; // Êµ¼ÊÖµÓÉai_mov_time¾ö¶¨£¬³õÊ¼Öµ²»ÓÃ¹Ü
+    int ai_mov_time_base = 13; // Êµï¿½ï¿½Öµï¿½ï¿½ai_mov_timeï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼Öµï¿½ï¿½ï¿½Ã¹ï¿½
 
     int player_key_state[8] = {0};
     int player_last_key = 0;
@@ -1300,7 +1300,7 @@ void mainscene() {
                 }
             }
             for ( int i = 0; i < players_num; ++i ) {
-                if ( tetris[i].game() ) { // ÓÎÏ·Ö´ÐÐ£¬Èç¹û¶ªÏÂ·µ»Øtrue
+                if ( tetris[i].game() ) { // ï¿½ï¿½Ï·Ö´ï¿½Ð£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½true
                     tetris[i].env_change = 1;
                     tetris[i].n_pieces += 1;
 
@@ -1319,7 +1319,7 @@ void mainscene() {
                     tetris[i].m_clearLines = 0;
                     tetris[i].m_attack = 0;
                     tetris[i].clearSFX( );
-                    if ( att > 0 ) { // Á½ÐÐ¹¥»÷
+                    if ( att > 0 ) { // ï¿½ï¿½ï¿½Ð¹ï¿½ï¿½ï¿½
                         tetris[i].total_atts += att;
                         if ( rule.GarbageCancel ) {
                             while ( att > 0 && ! tetris[i].accept_atts.empty() ) {
@@ -1365,7 +1365,7 @@ void mainscene() {
                         }
                     }
                 }
-                if ( tetris[i].env_change && tetris[i].ai_movs_flag == -1) { // AI ¼ÆËã
+                if ( tetris[i].env_change && tetris[i].ai_movs_flag == -1) { // AI ï¿½ï¿½ï¿½ï¿½
                     if ( (ai_eve || ai[i].style) && tetris[i].alive() ) {
                     //if ( i != 0 && tetris[i].alive() ) {
                         std::vector<AI::Gem> next;
@@ -1381,7 +1381,7 @@ void mainscene() {
                         //if ( tetris[i].m_pool.row[6] ) {
                         //    deep = ai_search_height_deep;
                         //}
-                        if ( i == 1 && rule.turn == 1 && rule.turnbase && level > 9 ) { // ·À2P±»³¬Ô½Ì«¶à
+                        if ( i == 1 && rule.turn == 1 && rule.turnbase && level > 9 ) { // ï¿½ï¿½2Pï¿½ï¿½ï¿½ï¿½Ô½Ì«ï¿½ï¿½
                             if ( tetris[0].n_pieces * ai[1].PieceMul - tetris[i].n_pieces * ai[0].PieceMul > 2 ) {
                                 level = 9;
                             }
@@ -1413,7 +1413,7 @@ void mainscene() {
                         } else {
                             tetris[i].ai_delay = ai_first_delay;
                         }
-                        if ( tetris[i].env_change == 2 ) { // ±»¹¥»÷¾Í°´ÒÑµÈ´ýÊ±¼ä¼õÉÙË¼Ë÷µÈ´ý
+                        if ( tetris[i].env_change == 2 ) { // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í°ï¿½ï¿½ÑµÈ´ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Ë¼ï¿½ï¿½ï¿½È´ï¿½
                             tetris[i].ai_delay = max(0, tetris[i].ai_delay - tetris[i].m_piecedelay);
                         }
                     }

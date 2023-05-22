@@ -268,7 +268,7 @@ namespace AI {
             //    special = 1;
             //    m_clear_info.normal[4] += 1;
             //}
-            if ( m_attack > 0 )
+            if ( m_attack > 0 || (TETRIO_ATTACK_TABLE && m_clearLines > 0) )
             {
                 if ( m_clear_info.wallkick_spin ) {
                     special = 1;
