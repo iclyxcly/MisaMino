@@ -4,6 +4,7 @@
 #include <string.h>
 #include "tetris_gem.h"
 #include "tetris_setting.h"
+#include <math.h>
 #ifdef XP_RELEASE
 #define AI_POOL_MAX_H 50
 #else
@@ -275,56 +276,60 @@ namespace AI {
             int attack = 0;
 
             if (TETRIO_ATTACK_TABLE) {
-
-                // https://media.discordapp.net/attachments/674629901663600685/815077464572166174/2020-05-30_02-07-18.png
-
-            int normalatk[3][21] = { {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,  3,  3,  3,  3,  3},
-                                     {1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4,  5,  5,  5,  5,  6},
-                                     {2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12} },
-
-                advattack[3][21] = {{2, 2, 3,  3,  4,  4,  5,  5,  6,  6,  7,  7,  8,  8,  9,  9, 10, 10, 11, 11, 12},
-                                    {4, 5, 6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24},
-                                    {6, 7, 9, 10, 12, 13, 15, 16, 18, 19, 21, 22, 24, 25, 27, 28, 30, 31, 33, 34, 36}},
-
-                b2blv1atk[3][21] = {{3, 3,  4,  5,  6,  6,  7,  8,  9,  9, 10, 11, 12, 12, 13, 14, 15, 15, 16, 17, 18},
-                                    {5, 6,  7,  8, 10, 11, 12, 13, 15, 16, 17, 18, 20, 21, 22, 23, 25, 26, 27, 28, 30},
-                                    {7, 8, 10, 12, 14, 15, 17, 19, 21, 22, 24, 26, 28, 29, 31, 33, 35, 36, 38, 40, 42}},
-
-                b2blv2atk[3][21] = {{4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24},
-                                    {6,  7,  9, 10, 12, 13, 15, 16, 18, 19, 21, 22, 24, 25, 27, 28, 30, 31, 33, 34, 36},
-                                    {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48}},
-
-                b2blv3atk[3][21] = {{5,  6,  7,  8, 10, 11, 12, 13, 15, 16, 17, 18, 20, 21, 22, 23, 25, 26, 27, 28, 30},
-                                    {7,  8, 10, 12, 14, 15, 17, 19, 21, 22, 24, 26, 28, 29, 31, 33, 35, 36, 38, 40, 42},
-                                    {9, 11, 13, 15, 18, 20, 22, 24, 27, 29, 31, 33, 36, 38, 40, 42, 45, 47, 49, 51, 54}},
-
-                b2blv4atk[3][21] = {{ 6,  7,  9, 10, 12, 13, 15, 16, 18, 19, 21, 22, 24, 25, 27, 28, 30, 31, 33, 34, 36},
-                                    { 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48},
-                                    {10, 12, 15, 17, 20, 22, 25, 27, 30, 32, 35, 37, 40, 42, 45, 47, 50, 52, 55, 57, 60}};
-                if (clearfull > 0) {
-                    if (clearfull <= 3 && !wallkick)
-                        attack += normalatk[clearfull - 1][combo - 1];
-                    else if (clearfull == 4 && !wallkick) {
-                        attack += b2b > 1 && b2b < 4 ? b2blv1atk[1][combo - 1] : b2b>3 && b2b < 8 ? b2blv2atk[1][combo - 1] : b2b > 7 && b2b < 24 ? b2blv3atk[1][combo - 1] : b2b > 23 ? b2blv4atk[1][combo - 1] : advattack[1][combo - 1];
+                int base_atk = 0;
+                auto get_attack = [&](int base_atk, int combo, int b2b) {
+                    double atk = base_atk;
+                    if (--b2b > 0) {
+                        double f = log1p(b2b * 0.8);
+                        atk += floor(1 + f) + (b2b > 1 ? 0 : (1 + f) / 3);
                     }
-                    else
-                    if (wallkick) {
-                        if (isEnableAllSpin()) {
-                            attack += clearfull + 1;
-                            if (wallkick == 2) { // mini
-                                attack -= 1; // mini minus
-                            }
-                        }
-                        else {
-                            if (clearfull == 1 && wallkick == 2) { // TSPIN MINI
-                                attack += b2b > 1 && b2b < 4 ? normalatk[clearfull][combo - 1] : b2b>3 && b2b < 8 ? normalatk[clearfull + 1][combo - 1] : b2b > 7 && b2b < 24 ? b2blv1atk[0][combo - 1] : b2b > 23 ? advattack[1][combo - 1] : 0;
-                            }
-                            else { //TSPIN SINGLE DOUBLE TRIPLE
-                                attack += b2b > 1 && b2b < 4 ? b2blv1atk[clearfull - 1][combo - 1] : b2b>3 && b2b < 8 ? b2blv2atk[clearfull - 1][combo - 1] : b2b > 7 && b2b < 24 ? b2blv3atk[clearfull - 1][combo - 1] : b2b > 23 ? b2blv4atk[clearfull - 1][combo - 1] : advattack[clearfull - 1][combo - 1];
-                            }
-                        }
+                    atk *= (1 + 0.25 * --combo);
+                    if (combo > 1) {
+                        double comboLog = log1p(1.25 * combo);
+                        atk = atk > comboLog ? atk : comboLog;
                     }
-                    // avoid collision // attack += getComboAttack(combo);
+                    return static_cast<int>(floor(atk));
+                    };
+                switch (clearfull) {
+                case 0:
+                    break;
+                case 1:
+                    switch (wallkick) {
+                    case 0:
+                        break;
+                    case 2:
+                        break;
+                    default:
+                        base_atk = 2;
+                        break;
+                    }
+                    break;
+                case 2:
+                    switch (wallkick) {
+                    case 0:
+                        base_atk = 1;
+                        break;
+                    default:
+                        base_atk = 4;
+                        break;
+                    }
+                    break;
+                case 3:
+                    switch (wallkick) {
+                    case 0:
+                        base_atk = 2;
+                        break;
+                    default:
+                        base_atk = 6;
+                        break;
+                    }
+                    break;
+                case 4:
+                    base_atk = 4;
+                    break;
+                }
+                if (clearfull != 0)
+                    attack = get_attack(base_atk, combo, b2b);
                     {
                         int i = gem_add_y + m_h;
                         for (; i >= 0; --i) {
@@ -335,7 +340,6 @@ namespace AI {
                         }
                     }
                 }
-            }
             else {
                 m_pc_att = 6;
                 if (clearfull > 1) {

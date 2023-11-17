@@ -11,9 +11,7 @@
 
 int enable_autostart = 0;
 int autostart_interval = 0;
-int count = 0;
 int next = 0;
-bool done_pupu = false;
 
 PIMAGE colorCell( int w, int h, color_t normal, color_t lt, color_t rb ) {
     PIMAGE img;
@@ -243,7 +241,7 @@ void tetris_draw(const TetrisGame& tetris, bool showAttackLine, bool showGrid) {
     }
     if ( ! tetris.accept_atts.empty() ) {
         int atts = 0;
-        for ( std::vector<int>::const_iterator it = tetris.accept_atts.begin(); it != tetris.accept_atts.end(); ++it ) {
+        for ( std::deque<int>::const_iterator it = tetris.accept_atts.begin(); it != tetris.accept_atts.end(); ++it ) {
             atts += *it;
         }
 
@@ -373,7 +371,7 @@ void tetris_draw(const TetrisGame& tetris, bool showAttackLine, bool showGrid) {
     }
     setcolor (EGERGB(0xa0, 0xa0, 0xa0));
     if (!tetris.alive()) {
-        if (enable_autostart == 1 && count > 0) {
+        if (enable_autostart == 1) {
             xyprintf(0, 0, "Next game will start in %d seconds", autostart_interval / 1000);
         }else{
             xyprintf(0, 0, "Press F2 to restart a new game. Press F12 to config your controls");
@@ -523,7 +521,7 @@ struct tetris_ai {
     tetris_ai() {
         style = 2;
         level = 4;
-        PieceMul = 0;
+        PieceMul = 1;
         plugin = "dllai.dll";
     }
 };
@@ -534,6 +532,7 @@ struct tetris_rule {
     int spin180;
     int InfinityHold;
     int GarbageCancel;
+    int GarbageCap;
     int GarbageBuffer;
     int GarbageBlocking;
     int combo_table_style;
@@ -545,6 +544,7 @@ struct tetris_rule {
         spin180 = 0;
         InfinityHold = 0;
         GarbageCancel = 1;
+        GarbageCap = 0;
         GarbageBuffer = 1;
         GarbageBlocking = 1;
         combo_table_style = 0;
@@ -620,6 +620,9 @@ void loadRule(CProfile& config, tetris_rule& rule) {
     }
     if ( config.IsInteger( "GarbageCancel" ) ) {
         rule.GarbageCancel = config.ReadInteger( "GarbageCancel" );
+    }
+    if (config.IsInteger("GarbageCap")) {
+        rule.GarbageCap = config.ReadInteger("GarbageCap");
     }
     if ( config.IsInteger( "GarbageBuffer" ) ) {
         rule.GarbageBuffer = config.ReadInteger( "GarbageBuffer" );
@@ -760,7 +763,7 @@ void mainscene() {
 #endif
 #ifdef XP_RELEASE
     int ai_eve = 0;
-    int ai_search_height_deep = next > 6 ? 6 : next;
+    int ai_search_height_deep = next;
     int player_stratagy_mode = !AI_SHOW;
     int mainloop_times = 1;
     int normal_delay = 1;
@@ -1117,7 +1120,6 @@ void mainscene() {
                 lastGameState = 0;
             } else {
                 if ( lastGameState == 0 ) {
-                    done_pupu = true;
                     if ( tetris[1].alive() ) {
                         tetris[0].ko();
                         tetris[1].n_win++;
@@ -1127,6 +1129,19 @@ void mainscene() {
                     }
                     //GameSound::ins().stopBGM();
                     if ( player.sound_bgm ) GameSound::ins().loadBGM_wait( rnd );
+                    if (enable_autostart) {
+                        cleardevice();
+                        tetris_draw(tetris[0], showAttackLine, showGrid);
+                        tetris_draw(tetris[1], showAttackLine, showGrid);
+                        Sleep(autostart_interval);
+                        int seed = (unsigned)time(0), pass = rnd.randint(1024);
+                        for (int i = 0; i < players_num; ++i) {
+                            tetris[i].reset(seed ^ ((!rule.samesequence) * i * 255), pass);
+                            onGameStart(tetris[i], rnd, i);
+                            tetris[i].acceptAttack(player_begin_attack);
+                        }
+                        if (player.sound_bgm) GameSound::ins().loadBGM(rnd);
+                    }
                 }
                 lastGameState = -1;
             }
@@ -1214,18 +1229,6 @@ void mainscene() {
                         tetris[0].trySpin180();
                         player_key_state[7] = 1;
                     }
-                    if (done_pupu == true && enable_autostart == 1) {
-                        if (!tetris[0].alive() || !tetris[1].alive()) {
-                            Sleep(autostart_interval);
-                            int seed = (unsigned)time(0), pass = rnd.randint(1024);
-                            for (int i = 0; i < players_num; ++i) {
-                                tetris[i].reset(seed ^ ((!rule.samesequence) * i * 255), pass);
-                                onGameStart(tetris[i], rnd, i);
-                                tetris[i].acceptAttack(player_begin_attack);
-                            }
-                            if (player.sound_bgm) GameSound::ins().loadBGM(rnd);
-                        }
-                    }
                     if ( k.key == key_f2 ) {
                         if ( !tetris[0].alive() || !tetris[1].alive() || tetris[0].n_pieces <= 20 ) {
                             int seed = (unsigned)time(0), pass = rnd.randint(1024);
@@ -1234,7 +1237,6 @@ void mainscene() {
                                 //tetris[i].reset( (unsigned)time(0) + ::GetTickCount() * i );
                                 onGameStart( tetris[i], rnd, i );
                                 tetris[i].acceptAttack(player_begin_attack);
-                                ++count;
                             }
                             if ( player.sound_bgm ) GameSound::ins().loadBGM( rnd );
                         }
@@ -1348,21 +1350,38 @@ void mainscene() {
                     }
 
                     if ( player_accept_attack && ( rule.GarbageBlocking == 0 || clearLines == 0) ) {
-                        while ( ! tetris[i].accept_atts.empty() ) {
+                        int total_recv = 0;
+                        std::deque<int> recv_atts;
+                        while (1) {
+                            if (tetris[i].accept_atts.empty()) break;
+                            if (tetris[i].accept_atts.front() + total_recv > rule.GarbageCap) {
+                                recv_atts.push_back(rule.GarbageCap - total_recv);
+                                tetris[i].accept_atts.front() -= (rule.GarbageCap - total_recv);
+                                total_recv = rule.GarbageCap;
+                                break;
+                            }
+                            else {
+                                total_recv += tetris[i].accept_atts.front();
+                                recv_atts.push_back(tetris[i].accept_atts.front());
+                                tetris[i].accept_atts.pop_front();
+                                if (tetris[i].accept_atts.empty()) break;
+                            }
+                        }
+                        while (!recv_atts.empty()) {
                             if ( rule.garbage == 0 ) {
-                                tetris[i].acceptAttack( *tetris[i].accept_atts.begin() );
+                                tetris[i].acceptAttack( recv_atts.front() );
                             } else if ( rule.garbage == 1 ) {
-                                for ( int n = *tetris[i].accept_atts.begin(); n > 0; n-= 2 ) {
+                                for ( int n = recv_atts.front(); n > 0; n-= 2 ) {
                                     if ( n >= 2 ) tetris[i].acceptAttack( 2 );
                                     else tetris[i].acceptAttack( 1 );
                                 }
                             } else { //if ( rule.garbage == 2 ) {
-                                for ( int n = *tetris[i].accept_atts.begin(); n > 0; --n ) {
+                                for ( int n = recv_atts.front(); n > 0; --n ) {
                                     tetris[i].acceptAttack( 1 );
                                 }
                             }
-                            tetris[i].accept_atts.erase( tetris[i].accept_atts.begin() );
-                        }
+                            recv_atts.pop_front();
+                        } 
                     }
                 }
                 if ( tetris[i].env_change && tetris[i].ai_movs_flag == -1) { // AI ����

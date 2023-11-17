@@ -1,7 +1,7 @@
 #pragma once
 
 #include <time.h>
-#include <vector>
+#include <deque>
 #include <string>
 #include <algorithm>
 
@@ -323,7 +323,7 @@ public:
     int mov_llrr;
     int env_change;
     int n_pieces;
-    std::vector<int> accept_atts;
+    std::deque<int> accept_atts;
     int m_last_hole_x;
     int n_win;
     int total_clears;
