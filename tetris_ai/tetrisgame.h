@@ -312,6 +312,11 @@ public:
     void soundon( bool on ) {
         mSFXon = on;
     }
+    typedef struct pending_lines {
+        int amt;
+        DWORD ping_timestamp;
+        DWORD recv_timestamp;
+    };
 public:
     bool hold;
     AI::Moving ai_movs;
@@ -323,7 +328,7 @@ public:
     int mov_llrr;
     int env_change;
     int n_pieces;
-    std::deque<int> accept_atts;
+    std::deque<pending_lines> accept_atts;
     int m_last_hole_x;
     int n_win;
     int total_clears;
@@ -339,4 +344,11 @@ public:
     std::string m_name;
     bool mSFXon;
     mutable std::string m_att_info;
+    pending_lines init_atts(int amt, int ping, int delay) {
+        pending_lines ret;
+		ret.amt = amt;
+		ret.ping_timestamp = GetTickCount() + ping * 2;
+		ret.recv_timestamp = ret.ping_timestamp + delay;
+		return ret;
+    }
 };

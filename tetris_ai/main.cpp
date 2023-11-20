@@ -239,11 +239,16 @@ void tetris_draw(const TetrisGame& tetris, bool showAttackLine, bool showGrid) {
             }
         }
     }
-    if ( ! tetris.accept_atts.empty() ) {
+    if ( ! tetris.accept_atts.empty() && GetTickCount() > tetris.accept_atts.front().ping_timestamp ) {
         int atts = 0;
-        for ( std::deque<int>::const_iterator it = tetris.accept_atts.begin(); it != tetris.accept_atts.end(); ++it ) {
-            atts += *it;
-        }
+        for (int i = 0; i < tetris.accept_atts.size(); ++i) {
+            if (GetTickCount() > tetris.accept_atts.at(i).ping_timestamp) {
+                atts += tetris.accept_atts.at(i).amt;
+            }
+            else {
+                break;
+            }
+        }   
 
         setfillcolor(hsv2rgb(0.0f, 1.0f, 1.0f));
         int bx = int(tetris.m_base.x + tetris.m_size.x * (4)) + tetris.m_size.x / 2;
@@ -533,6 +538,8 @@ struct tetris_rule {
     int InfinityHold;
     int GarbageCancel;
     int GarbageCap;
+    int GarbageDelay;
+    int PingDelay;
     int GarbageBuffer;
     int GarbageBlocking;
     int combo_table_style;
@@ -545,6 +552,8 @@ struct tetris_rule {
         InfinityHold = 0;
         GarbageCancel = 1;
         GarbageCap = 0;
+        GarbageDelay = 333;
+        PingDelay = 200;
         GarbageBuffer = 1;
         GarbageBlocking = 1;
         combo_table_style = 0;
@@ -623,6 +632,12 @@ void loadRule(CProfile& config, tetris_rule& rule) {
     }
     if (config.IsInteger("GarbageCap")) {
         rule.GarbageCap = config.ReadInteger("GarbageCap");
+    }
+    if (config.IsInteger("GarbageDelay")) {
+        rule.GarbageDelay = config.ReadInteger("GarbageDelay");
+    }
+    if (config.IsInteger("PingDelay")) {
+        rule.PingDelay = config.ReadInteger("PingDelay");
     }
     if ( config.IsInteger( "GarbageBuffer" ) ) {
         rule.GarbageBuffer = config.ReadInteger( "GarbageBuffer" );
@@ -1263,7 +1278,7 @@ void mainscene() {
                     }
                     if ( PUBLIC_VERSION == 0 ) {
                         if ( k.key == key_f9 ) {
-                            tetris[1].accept_atts.push_back(1);
+                            tetris[1].accept_atts.push_back(tetris[1].init_atts(1, rule.PingDelay, rule.GarbageDelay));
                         }
                     }
                 }
@@ -1325,11 +1340,11 @@ void mainscene() {
                         tetris[i].total_atts += att;
                         if ( rule.GarbageCancel ) {
                             while ( att > 0 && ! tetris[i].accept_atts.empty() ) {
-                                int m = min( att, tetris[i].accept_atts[0]);
+                                int m = min( att, tetris[i].accept_atts.front().amt);
                                 att -= m;
-                                tetris[i].accept_atts[0] -= m;
-                                if ( tetris[i].accept_atts[0] <= 0 ) {
-                                    tetris[i].accept_atts.erase( tetris[i].accept_atts.begin() );
+                                tetris[i].accept_atts.front().amt -= m;
+                                if ( tetris[i].accept_atts.front().amt <= 0 ) {
+                                    tetris[i].accept_atts.pop_front();
                                 }
                             }
                         }
@@ -1337,7 +1352,7 @@ void mainscene() {
                             for ( int j = 0; j < players_num; ++j ) {
                                 if ( i == j ) continue;
                                 if ( rule.GarbageBuffer ) {
-                                    tetris[j].accept_atts.push_back( att );
+                                    tetris[j].accept_atts.push_back( tetris[j].init_atts(att, rule.PingDelay, rule.GarbageDelay) );
                                     tetris[i].total_sent += att;
                                     if ( rule.turnbase ) tetris[j].env_change = 2;
                                 } else {
@@ -1353,18 +1368,18 @@ void mainscene() {
                         int total_recv = 0;
                         std::deque<int> recv_atts;
                         while (1) {
-                            if (tetris[i].accept_atts.empty()) break;
-                            if (tetris[i].accept_atts.front() + total_recv > rule.GarbageCap) {
+                            if (tetris[i].accept_atts.empty() || tetris[i].accept_atts.front().recv_timestamp > GetTickCount()) break;
+                            if (tetris[i].accept_atts.front().amt + total_recv > rule.GarbageCap) {
                                 recv_atts.push_back(rule.GarbageCap - total_recv);
-                                tetris[i].accept_atts.front() -= (rule.GarbageCap - total_recv);
+                                tetris[i].accept_atts.front().amt -= (rule.GarbageCap - total_recv);
                                 total_recv = rule.GarbageCap;
                                 break;
                             }
                             else {
-                                total_recv += tetris[i].accept_atts.front();
-                                recv_atts.push_back(tetris[i].accept_atts.front());
+                                total_recv += tetris[i].accept_atts.front().amt;
+                                recv_atts.push_back(tetris[i].accept_atts.front().amt);
                                 tetris[i].accept_atts.pop_front();
-                                if (tetris[i].accept_atts.empty()) break;
+                                if (tetris[i].accept_atts.empty() || tetris[i].accept_atts.front().recv_timestamp > GetTickCount()) break;
                             }
                         }
                         while (!recv_atts.empty()) {
@@ -1394,7 +1409,8 @@ void mainscene() {
                         int deep = ai_search_height_deep;
                         int upcomeAtt = 0;
                         for ( int j = 0; j < tetris[i].accept_atts.size(); ++j ) {
-                            upcomeAtt += tetris[i].accept_atts[j];
+                            if (tetris[i].accept_atts[j].ping_timestamp > GetTickCount())
+                                upcomeAtt += tetris[i].accept_atts[j].amt;
                         }
                         int level = ai[i].level;
                         //if ( tetris[i].m_pool.row[6] ) {
@@ -1443,7 +1459,7 @@ void mainscene() {
                 if ( ! tetris[i].alive() ) continue;
                 int total = 0;
                 for ( int j = 0; j < tetris[i].accept_atts.size(); ++j ) {
-                    total += tetris[i].accept_atts[j];
+                    total += tetris[i].accept_atts[j].amt;
                 }
                 if ( total >= 100 * 1 ) { // TODO
                     tetris[i].m_state = AI::Tetris::STATE_OVER;
