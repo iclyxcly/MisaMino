@@ -9,6 +9,8 @@
 #include "profile.h"
 #include <map>
 
+#define GAME_FPS 360
+
 int enable_autostart = 0;
 int autostart_interval = 0;
 int next = 0;
@@ -289,10 +291,10 @@ void tetris_draw(const TetrisGame& tetris, bool showAttackLine, bool showGrid) {
             app = double(tetris.total_atts)/tetris.n_pieces;
         }
         if ( tetris.m_drop_frame > 0 ) {
-            pps = (tetris.n_pieces - 1) * 60.0 / tetris.m_drop_frame;
+            pps = 1. * (tetris.n_pieces - 1) * GAME_FPS / tetris.m_drop_frame;
         }
         if ( tetris.m_drop_frame > 0 ) {
-            apm = tetris.total_atts * 60.0 * 60.0 / tetris.m_drop_frame;
+            apm = 1. * tetris.total_atts * GAME_FPS * 60 / tetris.m_drop_frame;
         }
         rectprintf(
             //int(tetris.m_base.x + tetris.m_size.x * (5+tetris.poolw())) + 1,
@@ -405,7 +407,7 @@ void setkeyScene( int player_keys[] ) {
     };
     int t_player_keys[16];
     for ( int i = 0; i < 8; ++i ) {
-        for ( t_player_keys[i] = 0; is_run() && t_player_keys[i] == 0; delay_fps(60) ) {
+        for ( t_player_keys[i] = 0; is_run() && t_player_keys[i] == 0; delay_fps(GAME_FPS) ) {
             if ( kbmsg() ) {
                 key_msg k = getkey();
                 if ( k.key == key_esc ) {
@@ -655,22 +657,22 @@ void loadRule(CProfile& config, tetris_rule& rule) {
 void loadPlayerSetting(CProfile& config, tetris_player& player) {
     config.SetSection( "Player" );
     if ( config.IsInteger( "tojsoftdrop" ) ) {
-        player.tojsoftdrop = config.ReadInteger( "tojsoftdrop" );
+        player.tojsoftdrop = config.ReadInteger("tojsoftdrop") * GAME_FPS / 60;
     }
     if ( config.IsInteger( "das" ) ) {
-        player.das = config.ReadInteger( "das" );
+        player.das = config.ReadInteger( "das" ) * GAME_FPS / 60;
         if ( player.das < 0 ) player.das = 0;
     }
     if (config.IsInteger("arr")) {
-        player.arr = config.ReadInteger("arr");
+        player.arr = config.ReadInteger("arr") * GAME_FPS / 60;
         if (player.arr < 0) player.arr = 0;
     }
     if ( config.IsInteger( "softdropdas" ) ) {
-        player.softdropdas = config.ReadInteger( "softdropdas" );
+        player.softdropdas = config.ReadInteger( "softdropdas" ) * GAME_FPS / 60;
         if ( player.softdropdas < 0 ) player.softdropdas = 0;
     }
     if ( config.IsInteger( "softdropdelay" ) ) {
-        player.softdropdelay = config.ReadInteger( "softdropdelay" );
+        player.softdropdelay = config.ReadInteger( "softdropdelay" ) * GAME_FPS / 60;
         if ( player.softdropdelay < 0 ) player.softdropdelay = 0;
     }
     config.SetSection( "Sound" );
@@ -694,8 +696,8 @@ void mainscene() {
     tetris_rule rule;
     tetris_player player;
     tetris_ai ai[2];
-    int ai_first_delay = 30;
-    int ai_move_delay = 20;
+    int ai_first_delay = 0;
+    int ai_move_delay = 0;
     int ai_4w = 1;
 
 
@@ -721,11 +723,11 @@ void mainscene() {
     {
         config.SetSection( "AI" );
         if ( config.IsInteger( "delay" ) ) {
-            ai_first_delay = config.ReadInteger( "delay" );
+            ai_first_delay = config.ReadInteger( "delay" ) * GAME_FPS / 60;
             if ( ai_first_delay < 0 ) ai_first_delay = 0;
         }
         if ( config.IsInteger( "move" ) ) {
-            ai_move_delay = config.ReadInteger( "move" );
+            ai_move_delay = config.ReadInteger( "move" ) * GAME_FPS / 60;
             if ( ai_move_delay < 0 ) ai_move_delay = 0;
         }
         if ( config.IsInteger( "4w" ) ) {
@@ -1117,7 +1119,7 @@ void mainscene() {
     }
     double ai_time = 0;
     int lastGameState = -1;
-    for ( ; is_run() ; normal_delay ? delay_fps(60) : delay_ms(0) ) {
+    for ( ; is_run() ; normal_delay ? delay_fps(GAME_FPS) : delay_ms(0) ) {
         for ( int jf = 0; jf < mainloop_times; ++jf) {
 #ifndef XP_RELEASE
             if ( AI_TRAINING_SLOW == 0 ) {
@@ -1408,10 +1410,9 @@ void mainscene() {
                         double beg = (double)::GetTickCount() / 1000;
                         int deep = ai_search_height_deep;
                         int upcomeAtt = 0;
-                        for ( int j = 0; j < tetris[i].accept_atts.size(); ++j ) {
-                            if (tetris[i].accept_atts[j].ping_timestamp > GetTickCount())
-                                upcomeAtt += tetris[i].accept_atts[j].amt;
-                        }
+						for (int j = 0; j < tetris[i].accept_atts.size(); ++j) {
+							upcomeAtt += tetris[i].accept_atts[j].amt;
+						}
                         int level = ai[i].level;
                         //if ( tetris[i].m_pool.row[6] ) {
                         //    deep = ai_search_height_deep;

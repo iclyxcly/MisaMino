@@ -1853,7 +1853,7 @@ namespace AI {
             for ( int iy = 0; iy < 16; ++iy ) {
                 overfield[iy] = gamefield.row[-iy-1];
             }
-            if ( p->maxDeep > 6 ) p->maxDeep = 6;
+            if ( p->maxDeep > 16 ) p->maxDeep = 16;
             for ( int i = 0; i < p->maxDeep; ++i ) {
                 next[i] = gemMap[p->next[i].num];
             }

@@ -369,7 +369,8 @@ namespace AI {
             return true;
         }
         bool game() {
-            ++m_frames;
+            if (m_curnum > 1)
+                ++m_frames;
             switch (m_state) {
             case STATE_MOVING:
                 {
