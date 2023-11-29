@@ -2,6 +2,7 @@
 #define PUBLIC_VERSION      1 // 发布模式
 #define GAMEMODE_4W         0 // 4w模式
 #define TETRIO_ATTACK_TABLE 1
+#define DELAYED_ATTACK		1
 #define PLAYER_WAIT         0 // 玩家等待AI思考，如果需要的话
 #define AI_TRAINING_SLOW    1
 #define USE4W               1

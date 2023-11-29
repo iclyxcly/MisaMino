@@ -26,6 +26,7 @@ namespace AI {
     bool g_spin180 = false;
     std::vector<int> g_combo_attack;
     bool g_allSpin = false;
+    bool g_lockOut = false;
     bool g_softdrop = true;
     //bool g_softdrop = false;
 
@@ -35,6 +36,14 @@ namespace AI {
     bool spin180Enable() {
         return g_spin180;
     }
+
+    void setLockOut(bool enable) {
+        g_lockOut = enable;
+    }
+    bool isLockOutEnable() {
+        return g_lockOut;
+    }
+
 
     void setComboList( std::vector<int> combolist ) {
         g_combo_attack = combolist;
@@ -229,8 +238,8 @@ namespace AI {
             MovingSimple m;
             q.pop(m);
             //if ( m.y < -1 ) continue;
-            if ( m.lastmove == MovingSimple::MOV_DROP ) {
-                if ( getGemMaxH(cur.num, m.spin) + m.y <= 2 ) //lockout
+            if ( m.lastmove == MovingSimple::MOV_DROP) {
+                if ( getGemMaxH(cur.num, m.spin) + m.y <= 2 && isLockOutEnable() ) //lockout
                     continue;
                 movs.push_back(m);
                 continue;

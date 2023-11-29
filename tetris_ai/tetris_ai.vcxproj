@@ -130,8 +130,10 @@
   <ItemGroup>
     <ClInclude Include="gamemode.h" />
     <ClInclude Include="gamepool.h" />
+    <ClInclude Include="json.hpp" />
     <ClInclude Include="Profile.h" />
     <ClInclude Include="random.h" />
+    <ClInclude Include="Replay.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="sound.h" />
     <ClInclude Include="tetris.h" />

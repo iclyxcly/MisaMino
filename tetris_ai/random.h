@@ -1,6 +1,6 @@
 #pragma once
 //#include <time.h>
-
+#include <utility>
 //************************************************************************
 //  This is a slightly modified version of Equamen mersenne twister.
 //
@@ -46,6 +46,15 @@ public:
     }
 
 	explicit mtrandom(uint32 seed) : left(1) {    init(seed);    }
+
+	mtrandom& operator=(const mtrandom& m) {
+		for (int i = 0; i < N; ++i) {
+			state[i] = m.state[i];
+		}
+		left = m.left;
+		next = state + (m.next - m.state);
+		return *this;
+	}
 
 	mtrandom(uint32* init_key, int key_length) : left(1) {
 		int i = 1, j = 0;
@@ -179,5 +188,37 @@ public:
 private:
     mtrandom r;
 };
-
+// this is how tetrio generate new bag of minos
+class RandomTetrio {
+private:
+	unsigned s;
+public:
+	RandomTetrio(unsigned seed = 0) {
+		setSeed(seed);
+	}
+	void setSeed(unsigned seed) {
+		s = seed % 2147483647;
+		s = (s <= 0) ? s + 2147483646 : s;
+	}
+	unsigned next() {
+		long long temp = s;
+		s = (16807 * temp) % 2147483647;
+		return s;
+	}
+	double nextFloat() {
+		double tmp = next() - 1;
+		return tmp / 2147483646.0;
+	}
+	void shuffleArray(int(&m)[7]) {
+		int idx1, idx2 = 7;
+		while (--idx2) {
+			idx1 = nextFloat() * (idx2 + 1);
+			std::swap(m[idx1], m[idx2]);
+		}
+		return;
+	}
+	unsigned getCurrentSeed() {
+		return s;
+	}
+};
 }

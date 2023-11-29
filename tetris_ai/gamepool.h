@@ -4,12 +4,14 @@
 #include <string.h>
 #include "tetris_gem.h"
 #include "tetris_setting.h"
-#include <math.h>
+#include <cmath>
+#include <algorithm>
 #ifdef XP_RELEASE
 #define AI_POOL_MAX_H 50
 #else
 #define AI_POOL_MAX_H 32
 #endif
+#define log1p(x) log(1+(x))
 
 namespace AI {
     struct GameField;
@@ -17,6 +19,8 @@ namespace AI {
     int getComboAttack( int combo );
     void setAllSpin(bool allSpin);
     bool isEnableAllSpin();
+    void setLockOut(bool enable);
+    bool isLockOutEnable();
     void setSoftdrop( bool softdrop );
     bool softdropEnable();
     typedef __int64 uint64;
@@ -28,12 +32,15 @@ namespace AI {
     const int gem_add_y = 6;
 #endif
     const int gem_beg_x = 3;
-    const int gem_beg_y = 1;
+    const int gem_beg_y = 0;
 
     struct GameField {
         signed char m_w, m_h;
         signed short combo;
         signed char b2b;
+        int x_before_spin;
+        int y_before_spin;
+        signed char spin_dir;
         unsigned long m_w_mask;
         unsigned long m_row[AI_POOL_MAX_H];
         int m_hold;
@@ -108,6 +115,11 @@ namespace AI {
                 if ( row[y + h] & _gem.bitmap[h] ) return true;
             }
             return false; //isCollide(y, _gem);
+        }
+        void reportXYRCoord(int x, int y, int r) {
+            x_before_spin = x;
+            y_before_spin = y;
+            spin_dir = r;
         }
         bool wallkickTest(int& x, int& y, const Gem & gem, int spinclockwise) const {
             static int Iwallkickdata[4][2][4][2] = {
@@ -212,13 +224,14 @@ namespace AI {
                     if ( x < 0 || y+2 > m_h || (row[y+2] & (1 << x))) ++cnt;
                     if ( x+2 >= m_w || (row[y] & (1 << (x+2)))) ++cnt;
                     if ( x+2 >= m_w || y+2 > m_h || (row[y+2] & (1 << (x+2)))) ++cnt;
-                    if ( cnt >= 3 ) return 1;
+                    if ( cnt >= 3 ) return cnt;
                 }
             }
             return 0;
         }
         signed char WallKickValue(int gem_num, int x, int y, int spin, signed char wallkick_spin) const {
-            if ( ! isWallKickSpin( x, y, getGem(gem_num, spin) ) ) {
+            const signed char kick_val = isWallKickSpin(x, y, getGem(gem_num, spin));
+            if ( !kick_val || spin_dir == 0 || wallkick_spin == 0) {
                 return wallkick_spin = 0;
             }
             if ( isEnableAllSpin() ) {
@@ -233,11 +246,52 @@ namespace AI {
                     }
                 }
             } else {
-                if ( wallkick_spin == 2 ) {
-                    if ( ! isCollide( x, y, getGem(gem_num, spin^2) ) ) {
-                        wallkick_spin = 1; // not t-mini
+                wallkick_spin = 1;
+                    FILE* fp = fopen("tetris.log", "w");
+                    Gem g = getGem(gem_num, spin);
+                    Gem g_mod = getGem(gem_num, 2);
+                    Gem g_oppo = getGem(gem_num, (spin + 2) % 4);
+                    signed char back_x = spin == 1 ? (x - 1) : (x + 1);
+                    bool mini_check = isCollide(x - 1, y, g) && isCollide(x + 1, y, g) && !isCollide(x, y - 1, g);
+                    const signed char offset_x = x - x_before_spin;
+                    const signed char offset_y = (y - y_before_spin) * -1;
+                    fprintf(fp, "x: %d, y: %d, r: %c, spin: %d\n", offset_x, offset_y, spin_dir == 3 ? 'R' : 'L', spin);
+      //              if ((mini_check && !isCollide(x, y, g_oppo)) || (mini_check && !isCollide(back_x, y, getGem(gem_num, 0))) || (spin % 2 != 0 && isCollide(x - 1, y, g) && isCollide(x + 1, y, g) && isCollide(x, y - 1, g) && isCollide(x, y, g_oppo))) {
+      //                  fprintf(fp, "tmini\n");
+      //                  fprintf(fp, "!isCollide(back_x, y - 1, getGem(gem_num, 0)): %d", !isCollide(back_x, y, getGem(gem_num, 0)));
+      //                  wallkick_spin = 2;
+      //              }
+      //              else if (spin == 0) {
+      //                  fprintf(fp, "tmini\n");
+						//wallkick_spin = 2;
+      //              }
+      //              else if (isCollide(x, y - 2, g) && isCollide(x, y, g_oppo) && !isCollide(x, y - 2, g_mod) && !isCollide(back_x, y - 2, g_mod)) {
+      //                  fprintf(fp, "mini2 %d\n", kick_val);
+      //                  wallkick_spin = 2;
+      //              }
+      //              else if (spin % 2 != 0 && !isCollide(x, y - 1, g) && !isCollide(x, y - 2, g)) {
+      //                  fprintf(fp, "not a tspin\n");
+      //                  wallkick_spin = 0;
+      //              }
+
+					if (spin == 0) {
+						wallkick_spin = 3; // mini for clear_1, normal for clear_2
+                        fprintf(fp, "flat mini\n");
+					}
+					else if (offset_x == 0 && offset_y == 0 && !isCollide(x, y - 1, g)) {
+						wallkick_spin = 2;
+                        fprintf(fp, "tspin mini on t2 slot\n");
+					}
+                    else if (offset_x == (spin == 3 ? -1 : 1) && spin_dir == spin && offset_y == 0) {
+                            wallkick_spin = 2;
+                            fprintf(fp, "side tspin mini\n");
                     }
-                }
+                    else if (offset_x == 0 && offset_y == -2 && spin_dir == (spin == 3 ? 1 : 3) && !isCollide(x, y - 1, g)) {
+                        wallkick_spin = 2;
+                        fprintf(fp, "polymer t2 mini");
+                    }
+                    fclose(fp);
+
             }
             return wallkick_spin;
         }
@@ -272,74 +326,75 @@ namespace AI {
         int getPCAttack() const {
             return m_pc_att;
         }
+        inline double mod1(double f) {
+            while (f > 1) f--;
+            return f;
+        }
         int getAttack( int clearfull, signed char wallkick ) {
-            int attack = 0;
-
+            int base_atk = 0, attack = 0;
             if (TETRIO_ATTACK_TABLE) {
-                int base_atk = 0;
-                auto get_attack = [&](int base_atk, int combo, int b2b) {
-                    double atk = base_atk;
-                    if (--b2b > 0) {
-                        double f = log1p(b2b * 0.8);
-                        atk += floor(1 + f) + (b2b > 1 ? 0 : (1 + f) / 3);
-                    }
-                    atk *= (1 + 0.25 * --combo);
-                    if (combo > 1) {
-                        double comboLog = log1p(1.25 * combo);
-                        atk = atk > comboLog ? atk : comboLog;
-                    }
-                    return static_cast<int>(floor(atk));
-                    };
+                if (clearfull == 0) return 0;
+                m_pc_att = 10;
+                double raw = 0;
+                // wallkick 2 = mini
                 switch (clearfull) {
                 case 0:
                     break;
                 case 1:
                     switch (wallkick) {
                     case 0:
-                        break;
                     case 2:
+                    case 3:
                         break;
                     default:
-                        base_atk = 2;
+                        raw = 2;
                         break;
                     }
                     break;
                 case 2:
                     switch (wallkick) {
                     case 0:
-                        base_atk = 1;
+                        raw = 1;
                         break;
+                    case 2:
+                        raw = 2;
+						break;
+                    case 3:
                     default:
-                        base_atk = 4;
+                        raw = 4;
                         break;
                     }
                     break;
                 case 3:
                     switch (wallkick) {
                     case 0:
-                        base_atk = 2;
+                        raw = 2;
                         break;
                     default:
-                        base_atk = 6;
+                        raw = 6;
                         break;
                     }
                     break;
                 case 4:
-                    base_atk = 4;
+                    raw = 4;
                     break;
                 }
-                if (clearfull != 0)
-                    attack = get_attack(base_atk, combo, b2b);
-                    {
-                        int i = gem_add_y + m_h;
-                        for (; i >= 0; --i) {
-                            if (m_row[i]) break;
-                        }
-                        if (i < 0) {
-                            attack += 10; // pc
-                        }
-                    }
+                if (b2b > 1) {
+                    double b = std::min(b2b - 1, 24);
+                    raw += (floor(1 + log1p((b) * 0.8)) + (b == 1 ? 0 : (1 + mod1(log1p(b * 0.8))) / 3));
                 }
+                double c = std::min(combo - 1, 20);
+                raw *= (1 + 0.25 * c);
+                if (c > 1) raw = std::max(log1p(1.25 * c), raw);
+                attack = floor(raw);
+                int i = gem_add_y + m_h;
+                for (; i >= 0; --i) {
+                    if (m_row[i]) break;
+                }
+                if (i < 0) {
+                    attack += m_pc_att; // pc
+                }
+            }
             else {
                 m_pc_att = 6;
                 if (clearfull > 1) {
