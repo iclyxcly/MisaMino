@@ -653,7 +653,7 @@ void loadRule(CProfile& config, tetris_rule& rule) {
     }
     if (config.IsInteger("DelayedAttackTime")) {
         rule.DelayedAttackTime = config.ReadInteger("DelayedAttackTime");
-        if (rule.DelayedAttackTime < 16) rule.DelayedAttackTime = 16;
+        if (rule.DelayedAttackTime < 0) rule.DelayedAttackTime = 0;
     }
     if (config.IsInteger("undoSteps")) {
         rule.undoSteps = config.ReadInteger("undoSteps");
@@ -1636,7 +1636,15 @@ void mainscene() {
                         }
                     }
                 }
-                
+                // Have to record state before ai start to calculate
+                if (UNDO_AVAILABLE && tetris[i].n_pieces > saved_board[i].back().n_pieces) {
+                    while (saved_board[i].size() > saved_board_num[i])
+                        saved_board[i].pop_front();
+                    saved_board[i].push_back(tetris[i]);
+                    //qsmark
+                    pRecord[i].commitStep();
+                    pRecord[i].queueCheck();
+                }
                 if ( tetris[i].env_change && tetris[i].ai_movs_flag == -1) { // AI ¼ÆËã
                     if ( (ai_eve || ai[i].style) && tetris[i].alive() ) {
                     //if ( i != 0 && tetris[i].alive() ) {
@@ -1691,14 +1699,6 @@ void mainscene() {
                         }
                     }
                     tetris[i].env_change = 0;
-                }
-                // Have to record state before ai start to calculate
-                if (UNDO_AVAILABLE && tetris[i].n_pieces > saved_board[i].back().n_pieces) {
-                    while (saved_board[i].size() > saved_board_num[i])
-                        saved_board[i].pop_front();
-                    saved_board[i].push_back(tetris[i]);
-                    pRecord[i].commitStep();
-                    pRecord[i].queueCheck();
                 }
             }
             if (atkRecver != -1 && atkCurFrame.atk > 0) {
@@ -1873,7 +1873,6 @@ void mainscene() {
             }
             tetris[1].m_frames = tetris[0].m_frames;
             firstHold[0] = tetris[0].m_pool.m_hold == 0;
-            firstHold[1] = tetris[1].m_pool.m_hold == 0;
         }
         for (int i = 0; i < players_num; i++) {
                 tetris_draw(tetris[i], showAttackLine, showGrid, rule.GarbageCap);

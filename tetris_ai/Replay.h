@@ -415,7 +415,7 @@ namespace RP {
 			else {
 				if ((evt == IGE || evt == IGE_C) && !temp_evt.empty() && !temp_evt.back().evts.empty() && event["frame"] == temp_evt.back().evts.back()["frame"] && temp_evt.back().evts.back()["type"] == "keyup" && temp_evt.back().evts.back()["data"]["key"] == "hardDrop") {
 					FILE* f = fopen("debug.txt", "a");
-					event["frame"] = frame - 1;
+					event["frame"] = frame - 2;
 					fprintf(f, "inserting ige at %d\n", frame);
 					fclose(f);
 					RP::json last = temp_evt.back().evts.back();
