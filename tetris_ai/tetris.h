@@ -141,7 +141,7 @@ namespace AI {
                 if ( dSpin == 1 ) spin = 0;
                 int tmp_x = m_cur_x;
                 int tmp_y = m_cur_y;
-                if ( m_pool.wallkickTest(m_cur_x, m_cur_y, gem, spin) ) {
+                if ((TETRIO_ATTACK_TABLE && m_pool.wallkickTestSRS_PLUS(m_cur_x, m_cur_y, gem, spin)) || (!TETRIO_ATTACK_TABLE && m_pool.wallkickTest(m_cur_x, m_cur_y, gem, spin))) {
                     m_cur = gem;
                     m_pool.reportXYRCoord(tmp_x, tmp_y, dSpin);
                     wallkick_spin = 2;
@@ -161,7 +161,14 @@ namespace AI {
             if ( m_state != STATE_MOVING ) return false;
             AI::Gem gem = AI::getGem(m_cur.num, (m_cur.spin + 2) % 4);
             if (m_pool.isCollide(m_cur_x, m_cur_y, gem)) {
-                return false;
+                if (TETRIO_ATTACK_TABLE && m_pool.wallkickTest180(m_cur_x, m_cur_y, gem)) {
+					m_cur = gem;
+					wallkick_spin = 1;
+					return true;
+				}
+                else {
+					return false;
+				}
             }
             m_cur = gem;
             wallkick_spin = 1;

@@ -157,7 +157,7 @@ namespace RP {
 				{"garbagecapmax",40},
 				{"bagtype","7bag"},
 				{"spinbonuses","T-spins"},
-				{"kickset","SRS"},
+				{"kickset","SRS+"},
 				{"nextcount",5},
 				{"allow_harddrop",true},
 				{"display_shadow",true},
@@ -268,7 +268,7 @@ namespace RP {
 				{"type","ige"},
 				{"data",{
 					{"type","interaction_confirm"},
-					{"sent_frame", frame - 1},
+					{"sent_frame", frame - 2},
 					{"cid",cid},
 					{"data",{
 						{"type","garbage"},
@@ -288,7 +288,10 @@ namespace RP {
 				temp_evt.push_back(last);
 			}
 		}
-		void revertHold() {
+		bool undoReady() {
+			return !temp_evt.empty() && temp_evt.back().done;
+		}
+		void clear_cur_move() {
 			if (temp_evt.back().evts.empty()) return;
 			temp_evt.back().evts.clear();
 		}
@@ -343,7 +346,7 @@ namespace RP {
 				event["type"] = "keydown";
 				event["data"] = {
 					{"key",key[k]},
-					{"subframe",0}
+					{"subframe",subframe}
 				};
 				break;
 			case KEYUP:
@@ -351,7 +354,7 @@ namespace RP {
 				event["type"] = "keyup";
 				event["data"] = {
 					{"key",key[k]},
-					{"subframe",0}
+					{"subframe",subframe}
 				};
 				break;
 			case IGE:
@@ -372,7 +375,7 @@ namespace RP {
 						}
 						}
 					},
-					{"frame",frame + 1},
+					{"frame",frame},
 					{"id",++id}
 				};
 				break;
@@ -383,7 +386,7 @@ namespace RP {
 					{"type","ige"},
 					{"data",{
 						{"type","interaction_confirm"},
-						{"sent_frame", frame - 1},
+						{"sent_frame", frame},
 						{"cid",cid},
 						{"data",{
 							{"type","garbage"},
@@ -413,9 +416,9 @@ namespace RP {
 				this->evt["events"].push_back(event);
 			}
 			else {
-				if ((evt == IGE || evt == IGE_C) && !temp_evt.empty() && !temp_evt.back().evts.empty() && event["frame"] == temp_evt.back().evts.back()["frame"] && temp_evt.back().evts.back()["type"] == "keyup" && temp_evt.back().evts.back()["data"]["key"] == "hardDrop") {
+				/*if ((evt == IGE || evt == IGE_C) && !temp_evt.empty() && !temp_evt.back().evts.empty() && event["frame"] == temp_evt.back().evts.back()["frame"] && temp_evt.back().evts.back()["type"] == "keyup" && temp_evt.back().evts.back()["data"]["key"] == "hardDrop") {
 					FILE* f = fopen("debug.txt", "a");
-					event["frame"] = frame - 2;
+					event["frame"] = frame;
 					fprintf(f, "inserting ige at %d\n", frame);
 					fclose(f);
 					RP::json last = temp_evt.back().evts.back();
@@ -428,7 +431,8 @@ namespace RP {
 				}
 				else {
 					insertTmpEvent(event);
-				}
+				}*/
+				insertTmpEvent(event);
 			}
 			if (evt == IGE) {
 				insertEvent(IGE_C, frame, param);

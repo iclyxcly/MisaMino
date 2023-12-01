@@ -202,6 +202,112 @@ namespace AI {
             }
             return false;
         }
+        bool wallkickTestSRS_PLUS(int& x, int& y, const Gem& gem, int spinclockwise) const {
+			static int Iwallkickdata[4][2][4][2] = {
+				{ // O
+					{ // R
+                        {-1, +0}, {+2, +0}, {-1, +2}, {+2, -1},
+					},
+					{ // L
+                        {+1, +0}, {-2, +0}, {+1, +2}, {-2, -1},
+					},
+				},
+				{ // L
+					{ // O
+                        {-1, +0}, {+2, +0}, {+2, +1}, {-1, -2},
+					},
+					{ // 2
+                        {+2, +0}, {-1, +0}, {+2, -1}, {-1, 2},
+					},
+				},
+				{ // 2
+					{ // L
+                        {+1, +0}, {-2, +0}, {+1, -2}, {-2, +1},
+					},
+					{ // R
+                        {-1, +0}, {+2, +0}, {-1, -2}, {+2, +1},
+					},
+				},
+				{ // R
+					{ // 2
+                         {-2, +0}, {+1, +0}, {-2, -1}, {+1, +2},
+					},
+					{ // O
+                        {+1, +0}, {-2, +0}, {-2, +1}, {+1, -2},
+					},
+				},
+			};
+            static int wallkickdata[4][2][4][2] = {
+                { // O
+                    { // R
+                        { 1, 0},{ 1, 1},{ 0,-2},{ 1,-2},
+                    },
+                    { // L
+                        {-1, 0},{-1, 1},{ 0,-2},{-1,-2},
+                    },
+                },
+                { // L
+                    { // O
+                        { 1, 0},{ 1,-1},{ 0, 2},{ 1, 2},
+                    },
+                    { // 2
+                        { 1, 0},{ 1,-1},{ 0, 2},{ 1, 2},
+                    },
+                },
+                { // 2
+                    { // L
+                        {-1, 0},{-1, 1},{ 0,-2},{-1,-2},
+                    },
+                    { // R
+                        { 1, 0},{ 1, 1},{ 0,-2},{ 1,-2},
+                    },
+                },
+                { // R
+                    { // 2
+                        {-1, 0},{-1,-1},{ 0, 2},{-1, 2},
+                    },
+                    { // O
+                        {-1, 0},{-1,-1},{ 0, 2},{-1, 2},
+                    },
+                },
+            };
+            int(*pdata)[2][4][2] = wallkickdata;
+            if (gem.num == 1) pdata = Iwallkickdata;
+            for (int itest = 0; itest < 4; ++itest) {
+                int dx = x + pdata[gem.spin][spinclockwise][itest][0];
+                int dy = y + pdata[gem.spin][spinclockwise][itest][1];
+                if (!isCollide(dx, dy, gem)) {
+                    x = dx; y = dy;
+                    return true;
+                }
+            }
+            return false;
+        }
+        bool wallkickTest180(int& x, int& y, const Gem& gem) const {
+            static int wallkickdata[4][5][2] = {
+                { // 2 -> O
+                    {0, 1}, {-1, 1}, {1, 1}, {-1, 0}, {1, 0}
+                },
+                { // R -> L
+                    {1, 0}, {1, -2}, {1, -1}, {0, -2}, {0, -1}
+                },
+                { // O -> 2
+                    {0, -1}, {1, -1}, {-1, -1}, {1, 0}, {-1, 0}
+                },
+                { // L -> R
+                    {-1, 0}, {-1, -2}, {-1, -1}, {0, -2}, {0, -1}
+                },
+            };
+            for (int itest = 0; itest < 5; ++itest) {
+                int dx = x + wallkickdata[gem.spin][itest][0];
+                int dy = y + wallkickdata[gem.spin][itest][1];
+                if (!isCollide(dx, dy, gem)) {
+                    x = dx; y = dy;
+                    return true;
+                }
+            }
+            return false;
+        }
         void paste(int x, int y, const Gem & gem) {
             for ( int h = 0; h < gem.geth(); ++h ) {
                 if (x >= 0)
