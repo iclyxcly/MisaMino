@@ -231,69 +231,26 @@ namespace RP {
 				ige_reorder.pop_front();
 			}
 		}
-		void amendIGEEvt(int frame, atk_t atk) {
-			step_t last;
-			bool lastExist = false;
-			if (!temp_evt.back().done) {
-				last = temp_evt.back();
-				temp_evt.pop_back();
-				lastExist = true;
-			}
-			json ige;
-			//frame = temp_evt.back().evts.back()["frame"];
-			ige["frame"] = frame - 1;
-			ige["type"] = "ige";
-			ige["data"] = {
-				{"type","ige"},
-				{"data",{
-					{"type","interaction"},
-					{"sent_frame", frame - 2},
-					{"cid",++cid},
-					{"data",{
-						{"type","garbage"},
-						{"amt",atk.atk},
-						{"x",0},{"y",0},
-						{"column",atk.pos}
-						}
-					}
-					}
-				},
-				{"frame",frame},
-				{"id",++id}
-			};
-			json ige_c;
-			ige_c["frame"] = frame;
-			ige_c["type"] = "ige";
-			ige_c["data"] = {
-				{"type","ige"},
-				{"data",{
-					{"type","interaction_confirm"},
-					{"sent_frame", frame - 2},
-					{"cid",cid},
-					{"data",{
-						{"type","garbage"},
-						{"amt",atk.atk},
-						{"x",0},{"y",0},
-						{"column",atk.pos}
-						}
-					}
-					}
-				},
-				{"frame",frame},
-				{"id",++id}
-			};
-			temp_evt.back().evts.push_back(ige);
-			temp_evt.back().evts.push_back(ige_c);
-			if (lastExist) {
-				temp_evt.push_back(last);
-			}
-		}
 		bool undoReady() {
 			return !temp_evt.empty() && temp_evt.back().done;
 		}
 		void clear_cur_move() {
 			if (temp_evt.back().evts.empty()) return;
+			std::deque<json> iges;
+			while (!temp_evt.back().evts.empty()) {
+				if (temp_evt.back().evts.back()["type"] == "ige") {
+					iges.push_front(temp_evt.back().evts.back());
+					temp_evt.back().evts.pop_back();
+				}
+				else {
+					temp_evt.back().evts.pop_back();
+				}
+			}
 			temp_evt.back().evts.clear();
+			while (!iges.empty()) {
+				temp_evt.back().evts.push_back(iges.front());
+				iges.pop_front();
+			}
 		}
 		void commitStep() {
 			temp_evt.back().done = true;
@@ -309,7 +266,7 @@ namespace RP {
 			if (!temp_evt.back().done) temp_evt.pop_back();
 			temp_evt.pop_back();
 		}
-		void insertEvent(int evt, int frame, void* param, double subframe = 0.0) {
+		json initEvent(int evt, int frame, void* param, double subframe = 0.0) {
 			json event;
 			event["frame"] = frame;
 			int k;
@@ -343,6 +300,12 @@ namespace RP {
 				break;
 			case KEYDOWN:
 				k = *(int*)param;
+				while (!(temp_evt.empty() || temp_evt.back().evts.empty()) &&
+					((frame <= temp_evt.back().evts.back()["frame"] && temp_evt.back().evts.back()["data"]["key"] == "hardDrop") ||
+						frame < temp_evt.back().evts.back()["frame"])) {
+					++frame;
+				}
+				event["frame"] = frame;
 				event["type"] = "keydown";
 				event["data"] = {
 					{"key",key[k]},
@@ -350,6 +313,10 @@ namespace RP {
 				};
 				break;
 			case KEYUP:
+				while (!temp_evt.empty() && !temp_evt.back().evts.empty() && frame < temp_evt.back().evts.back()["frame"]) {
+					++frame;
+				}
+				event["frame"] = frame;
 				k = *(int*)param;
 				event["type"] = "keyup";
 				event["data"] = {
@@ -412,26 +379,14 @@ namespace RP {
 			default:
 				break;
 			}
+			return event;
+		}
+		void insertEvent(int evt, int frame, void* param, double subframe = 0.0) {
+			json event = initEvent(evt, frame, param, subframe);
 			if (undoSteps == 0 || (evt == FULL || evt == START || evt == TARGETS || evt == END)) {
 				this->evt["events"].push_back(event);
 			}
 			else {
-				/*if ((evt == IGE || evt == IGE_C) && !temp_evt.empty() && !temp_evt.back().evts.empty() && event["frame"] == temp_evt.back().evts.back()["frame"] && temp_evt.back().evts.back()["type"] == "keyup" && temp_evt.back().evts.back()["data"]["key"] == "hardDrop") {
-					FILE* f = fopen("debug.txt", "a");
-					event["frame"] = frame;
-					fprintf(f, "inserting ige at %d\n", frame);
-					fclose(f);
-					RP::json last = temp_evt.back().evts.back();
-					temp_evt.back().evts.pop_back();
-					RP::json last2 = temp_evt.back().evts.back();
-					temp_evt.back().evts.pop_back();
-					insertTmpEvent(event);
-					insertTmpEvent(last2);
-					insertTmpEvent(last);
-				}
-				else {
-					insertTmpEvent(event);
-				}*/
 				insertTmpEvent(event);
 			}
 			if (evt == IGE) {
