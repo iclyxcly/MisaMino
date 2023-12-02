@@ -33,6 +33,7 @@ public:
         last_max_combo = 0;
         mSFXon = false;
         m_lr = 0;
+        waiting = false;
         pAIName = NULL;
         pTetrisAI = NULL;
         AI::AI_Param param = {

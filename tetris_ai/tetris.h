@@ -100,6 +100,7 @@ namespace AI {
             m_cur_x = AI::gem_beg_x;
             m_cur_y = AI::gem_beg_y;
             m_curnum = 0;
+            waiting = false;
             m_clearLines = 0;
             m_clearGarbageLines = 0;
             m_attack = 0;
@@ -465,6 +466,7 @@ namespace AI {
         int m_hold;
         int m_cur_x, m_cur_y;
         int m_curnum;
+        bool waiting;
         signed char wallkick_spin;
         std::deque<AI::Gem> m_next;
         point m_base, m_size;

@@ -353,51 +353,22 @@ namespace AI {
                 }
             } else {
                 wallkick_spin = 1;
-				FILE* fp = fopen("tetris.log", "w");
 				Gem g = getGem(gem_num, spin);
-				Gem g_mod = getGem(gem_num, 2);
-				Gem g_oppo = getGem(gem_num, (spin + 2) % 4);
 				signed char back_x = spin == 1 ? (x - 1) : (x + 1);
-				bool mini_check = isCollide(x - 1, y, g) && isCollide(x + 1, y, g) && !isCollide(x, y - 1, g);
 				const signed char offset_x = x - x_before_spin;
 				const signed char offset_y = (y - y_before_spin) * -1;
-				fprintf(fp, "x: %d, y: %d, r: %c, spin: %d\n", offset_x, offset_y, spin_dir == 3 ? 'R' : 'L', spin);
-				//              if ((mini_check && !isCollide(x, y, g_oppo)) || (mini_check && !isCollide(back_x, y, getGem(gem_num, 0))) || (spin % 2 != 0 && isCollide(x - 1, y, g) && isCollide(x + 1, y, g) && isCollide(x, y - 1, g) && isCollide(x, y, g_oppo))) {
-				//                  fprintf(fp, "tmini\n");
-				//                  fprintf(fp, "!isCollide(back_x, y - 1, getGem(gem_num, 0)): %d", !isCollide(back_x, y, getGem(gem_num, 0)));
-				//                  wallkick_spin = 2;
-				//              }
-				//              else if (spin == 0) {
-				//                  fprintf(fp, "tmini\n");
-								  //wallkick_spin = 2;
-				//              }
-				//              else if (isCollide(x, y - 2, g) && isCollide(x, y, g_oppo) && !isCollide(x, y - 2, g_mod) && !isCollide(back_x, y - 2, g_mod)) {
-				//                  fprintf(fp, "mini2 %d\n", kick_val);
-				//                  wallkick_spin = 2;
-				//              }
-				//              else if (spin % 2 != 0 && !isCollide(x, y - 1, g) && !isCollide(x, y - 2, g)) {
-				//                  fprintf(fp, "not a tspin\n");
-				//                  wallkick_spin = 0;
-				//              }
-
-				if (spin == 0) {
+				if (spin == 0) { // flat mini
 					wallkick_spin = 3; // mini for clear_1, normal for clear_2
-					fprintf(fp, "flat mini\n");
 				}
-				else if (offset_x == 0 && offset_y == 0 && !isCollide(x, y - 1, g)) {
+				else if (offset_x == 0 && offset_y == 0 && !isCollide(x, y - 1, g)) { // tmini on t2 slot
 					wallkick_spin = 2;
-					fprintf(fp, "tspin mini on t2 slot\n");
 				}
-				else if (offset_x == (spin == 3 ? -1 : 1) && spin_dir == spin && offset_y == 0) {
+				else if (offset_x == (spin == 3 ? -1 : 1) && spin_dir == spin && offset_y == 0) { // side tmini
 					wallkick_spin = 2;
-					fprintf(fp, "side tspin mini\n");
 				}
-				else if (offset_x == 0 && offset_y == -2 && spin_dir == (spin == 3 ? 1 : 3) && !isCollide(x, y - 1, g)) {
+				else if (offset_x == 0 && offset_y == -2 && spin_dir == (spin == 3 ? 1 : 3) && !isCollide(x, y - 1, g)) { // polymer t2 mini
 					wallkick_spin = 2;
-					fprintf(fp, "polymer t2 mini");
 				}
-				fclose(fp);
-
             }
             return wallkick_spin;
         }

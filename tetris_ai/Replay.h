@@ -232,7 +232,7 @@ namespace RP {
 			}
 		}
 		bool undoReady() {
-			return !temp_evt.empty() && temp_evt.back().done;
+			return !temp_evt.empty();
 		}
 		void clear_cur_move() {
 			if (temp_evt.back().evts.empty()) return;
@@ -262,9 +262,24 @@ namespace RP {
 			}
 			temp_evt.back().evts.push_back(evt);
 		}
-		void undo() {
+		std::deque<json> getIGE_events() {
+			std::deque<json> iges;
+			while (!temp_evt.back().evts.empty()) {
+				if (temp_evt.back().evts.back()["type"] == "ige") {
+					iges.push_front(temp_evt.back().evts.back());
+				}
+				temp_evt.back().evts.pop_back();
+			}
+			return iges;
+		}
+		void undo(bool is_AI = false) {
 			if (!temp_evt.back().done) temp_evt.pop_back();
+			std::deque<json> iges = getIGE_events();
 			temp_evt.pop_back();
+			while (!is_AI && !iges.empty()) {
+				insertTmpEvent(iges.front());
+				iges.pop_front();
+			}
 		}
 		json initEvent(int evt, int frame, void* param, double subframe = 0.0) {
 			json event;
@@ -443,6 +458,9 @@ namespace RP {
 		f.open(this->filename + ".ttrm");
 		f << r;;
 		f.close();
+	}
+	std::string getFilename() {
+		return this->filename + ".ttrm";
 	}
 	void setUser(std::string user1, std::string user2, std::string user1ID = "0", std::string user2ID = "0") {
 		json juser1 = {
