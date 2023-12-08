@@ -1332,7 +1332,7 @@ void mainscene() {
                         player_key_state[5] = 1;
                     }
                     if ( k.key == player_keys[6] && player_key_state[6] == 0 ) {
-                        if (!tetris[0].waiting && tetris[0].drop()) {
+                        if ((!rule.turnbase || !tetris[0].waiting) && tetris[0].drop()) {
                             is_drop[0] = true;
                             firstHold[0] = tetris[0].m_pool.m_hold == 0;
                             //player_key_state[0] = !!player_key_state[0];
@@ -1938,9 +1938,9 @@ void mainscene() {
             }
             if ( ! ai_eve ) break;
         }
-        int p1_pieces = tetris[0].n_pieces / ai[0].PieceMul;
-        int p2_pieces = tetris[1].n_pieces / ai[1].PieceMul;
-        bool in_expectation = max(p1_pieces, p2_pieces) - min(p1_pieces, p2_pieces) <= max(ai[0].PieceMul, ai[1].PieceMul) - min(ai[0].PieceMul, ai[1].PieceMul);
+        //int p1_pieces = tetris[0].n_pieces / ai[0].PieceMul;
+        //int p2_pieces = tetris[1].n_pieces / ai[1].PieceMul;
+        //bool in_expectation = max(p1_pieces, p2_pieces) - min(p1_pieces, p2_pieces) <= max(ai[0].PieceMul, ai[1].PieceMul) - min(ai[0].PieceMul, ai[1].PieceMul);
         // undo
         if (UNDO_AVAILABLE && undo && saved_board[0].size() > 2  && pRecord[1].undoReady()) {
             lastGameState = 0;
@@ -2006,11 +2006,13 @@ void mainscene() {
             --game_info_time;
             xyprintf( 0, getheight() - textheight("I"), "%s", game_info.c_str());
         }
-		if (tetris[0].waiting) {
-			xyprintf(getwidth() * 0.2, getheight() * 0.5, "Waiting...");
-		}
-        if (tetris[1].waiting) {
-            xyprintf(getwidth() * 0.7, getheight() * 0.5, "Waiting...");
+        if (rule.turnbase) {
+            if (tetris[0].waiting) {
+                xyprintf(getwidth() * 0.2, getheight() * 0.5, "Waiting...");
+            }
+            if (tetris[1].waiting) {
+                xyprintf(getwidth() * 0.7, getheight() * 0.5, "Waiting...");
+            }
         }
 #ifndef XP_RELEASE
         if ( ai_eve ) {
