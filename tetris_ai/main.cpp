@@ -1263,6 +1263,7 @@ void mainscene() {
 						if (rule.turnbase) {
 							tetris[0].waiting = false;
 							tetris[1].waiting = true;
+							memset(is_drop, 0, sizeof(is_drop));
 						}
 						bool has_dead = !tetris[0].alive() || !tetris[1].alive();
 						if (has_dead || tetris[0].n_pieces <= 20) {

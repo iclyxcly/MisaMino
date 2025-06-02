@@ -28,10 +28,10 @@ namespace AI {
 
 	struct GameField {
 		signed char m_w, m_h;
-		signed short combo;
-		signed char b2b;
-		int x_before_spin;
-		int y_before_spin;
+		unsigned short combo;
+		unsigned b2b;
+		short x_before_spin;
+		short y_before_spin;
 		signed char spin_dir;
 		unsigned long m_w_mask;
 		unsigned long m_row[AI_POOL_MAX_H];
@@ -455,10 +455,10 @@ namespace AI {
 				break;
 			}
 			if (b2b > 1) {
-				double b = std::min(b2b - 1, 24);
+				double b = b2b - 1;
 				raw += (floor(1 + log1p((b) * 0.8)) + (b == 1 ? 0 : (1 + mod1(log1p(b * 0.8))) / 3));
 			}
-			double c = std::min(combo - 1, 20);
+			double c = combo - 1;
 			raw *= (1 + 0.25 * c);
 			if (c > 1) raw = std::max(log1p(1.25 * c), raw);
 			attack = floor(raw * mul);
