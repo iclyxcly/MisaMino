@@ -27,8 +27,12 @@ public:
         if ( ret > 0 ) value = buff;
         return ret;
     }
-    bool IsInteger( std::string key ) {
-        ReadInteger( key );
+    bool IsInteger(std::string key) {
+        ReadInteger(key);
+        return m_errcode == 0;
+    }
+    bool IsFloat(std::string key) {
+        ReadFloat(key);
         return m_errcode == 0;
     }
     int ReadInteger( std::string key ) {
@@ -36,6 +40,19 @@ public:
         if ( ReadString( key, s ) > 0 ) {
             int ret;
             if ( sscanf( s.c_str(), "%d", &ret ) > 0 ) {
+                m_errcode = 0;
+                return ret;
+            }
+            m_errcode = 1;
+        }
+        m_errcode = 2;
+        return 0;
+    }
+    float ReadFloat(std::string key) {
+        std::string s;
+        if (ReadString(key, s) > 0) {
+            float ret;
+            if (sscanf(s.c_str(), "%f", &ret) > 0) {
                 m_errcode = 0;
                 return ret;
             }

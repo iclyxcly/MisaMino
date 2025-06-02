@@ -85,9 +85,6 @@ public:
         return gamesound;
     }
     void loadSFX () {
-#if !defined(XP_RELEASE)
-        return;
-#endif
         std::string basePath = "sound/sfx/default/";
         mSFX_ko.open(&mVolume, (basePath + "sfx_ko.wav").c_str());
         mSFX_gameover.open(&mVolume, (basePath + "sfx_gameover.wav").c_str());

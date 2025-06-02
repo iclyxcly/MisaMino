@@ -4,29 +4,59 @@
 #include "json.hpp"
 #include "tetrisgame.h"
 #include <string>
-#include <list>
 #include <fstream>
+#include <sstream>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <filesystem>
+#include <cstdint>
 
 namespace RP {
+	using i8 = int8_t;
+	using u8 = uint8_t;
+	using i16 = int16_t;
+	using u16 = uint16_t;
+	using i32 = int32_t;
+	using u32 = uint32_t;
+	using i64 = int64_t;
+	using u64 = uint64_t;
+
 	using json = nlohmann::json;
-
-
-	enum {
-		FULL,
-		KEYDOWN,
-		KEYUP,
-		START,
-		TARGETS,
-		IGE,
-		IGE_C,
-		END
+	enum IGEType : u8 {
+		I,
+		IC
 	};
-	enum {
+	std::string igeKey[2] = {
+		"interaction",
+		"interaction_confirm"
+	};
+	enum InputType : u8 {
+		keyDown,
+		keyUp
+	};
+	enum EventType : u8 {
+		kDown,
+		kUp,
+		IGE,
+		begin,
+		stop,
+		checkpoint
+	};
+	std::string eventKey[6] = {
+		"keydown",
+		"keyup",
+		"ige",
+		"start",
+		"end",
+		"checkpoint"
+	};
+	enum Input : u8 {
 		moveLeft,
 		moveRight,
 		hold,
 		hardDrop,
-		rotateCCW, 
+		rotateCCW,
 		rotateCW,
 		rotate180,
 		softDrop
@@ -51,433 +81,569 @@ namespace RP {
 	end > data reaseon topout/winner export{aggregatestats apm pps vsscore}
 
 	*/
-	typedef struct {
-		int frame;
-		double subframe;
-	} frame_t;
-	typedef struct {
-		std::list<json> evts;
-		bool done;
-	} step_t;
-	class playerRecord
-	{
-		int cid = 0;
-		int id = 0;
-		json info;
-		json evt;
-		json handling;
-		json board;
-		json options;
-		json endGameStat;
-		int totalFrames;
-		int undoSteps;
-		std::list<step_t> temp_evt;
-		std::list<json> ige_reorder;
-	public:
-		playerRecord() {
-			info = {
-				{"user",{{"_id","0"},{"username",""}}},
-				{"success",false}
-			};
-			evt["events"] = json::array();
-			totalFrames = 0;
-			board = json::array();
-			int row[10] = { 0 };
-			for (int i = 0; i < 40; i++) {
-				board.push_back(row);
+	struct User {
+		u8 id;
+		std::string name;
+		json build() const {
+			json ret;
+			ret["id"] = std::to_string(id);
+			ret["username"] = name;
+			return ret;
+		}
+		void init(const u8& id, const std::string& name) {
+			this->id = id;
+			this->name = name;
+		}
+		User(const u8& id, const std::string& name) {
+			init(id, name);
+		}
+		User() {}
+	};
+	struct Stats {
+		float apm, pps, vs;
+		Stats(const float& a, const float& p, const float& v) : apm(a), pps(p), vs(v) {}
+		Stats() {}
+		json build() const {
+			json ret;
+			ret["apm"] = apm;
+			ret["pps"] = pps;
+			ret["vsscore"] = vs;
+			return ret;
+		}
+	};
+	struct Handling {
+		float das;
+		float arr;
+		u8 sdf;
+		json build() const {
+			json ret;
+			ret["arr"] = arr;
+			ret["das"] = das;
+			ret["dcd"] = 0;
+			ret["sdf"] = sdf;
+			ret["may20g"] = false;
+			ret["irs"] = "off";
+			ret["ihs"] = "off";
+			ret["safelock"] = false;
+			ret["cancel"] = false;
+			return ret;
+		}
+	};
+	struct Options {
+		static json buildS2(const User& u, const Handling& h, const u32& seed, const tetris_rule& rule) {
+			json ret;
+			ret["version"] = 19;
+			ret["seed"] = seed;
+			ret["g"] = 0;
+			ret["countdown"] = true;
+			ret["precountdown"] = 5000;
+			ret["prestart"] = 1000;
+			ret["mission"] = "";
+			ret["mission_type"] = "mission_versus";
+			ret["zoominto"] = "slow";
+			ret["slot_counter1"] = "stopwatch";
+			ret["slot_counter2"] = "attack";
+			ret["slot_counter3"] = "pieces";
+			ret["slot_counter5"] = "vs";
+			ret["slot_bar1"] = "impending";
+			ret["display_username"] = true;
+			ret["hasgarbage"] = true;
+			ret["bgmnoreset"] = true;
+			ret["neverstopbgm"] = true;
+			ret["clutch"] = false;
+			ret["spinbonuses"] = "all-mini+";
+			ret["garbagespeed"] = rule.GarbageSpeed;
+			ret["garbagecap"] = rule.GarbageCap;
+			ret["forfeit_time"] = 150;
+			ret["locktime"] = 999999999;
+			ret["infinite_movement"] = true;
+			ret["allow180"] = true;
+			ret["manual_allowed"] = false;
+			ret["b2bcharging"] = true;
+			ret["b2bcharge_base"] = 3;
+			ret["allclear_garbage"] = 5;
+			ret["allclear_b2b"] = 1;
+			ret["allclear_b2b_sends"] = true;
+			ret["allclear_b2b_dupes"] = false;
+			ret["nolockout"] = rule.lockout == 0;
+			ret["noextrawidth"] = true;
+			ret["garbagespecialbonus"] = true;
+			ret["song"] = "none";
+			ret["latencymode"] = "low";
+			ret["handling"] = h.build();
+			ret["gameid"] = u.id;
+			ret["username"] = u.name;
+			ret["passthrough"] = "limited";
+			ret["seed_random"] = false;
+			return ret;
+		}
+		static json buildS1(const User& u, const Handling& h, const u32& seed, const tetris_rule& rule) {
+			json ret;
+			ret["version"] = 19;
+			ret["seed"] = seed;
+			ret["g"] = 0;
+			ret["countdown"] = true;
+			ret["precountdown"] = 5000;
+			ret["prestart"] = 1000;
+			ret["mission"] = "";
+			ret["mission_type"] = "mission_versus";
+			ret["zoominto"] = "slow";
+			ret["slot_counter1"] = "stopwatch";
+			ret["slot_counter2"] = "attack";
+			ret["slot_counter3"] = "pieces";
+			ret["slot_counter5"] = "vs";
+			ret["slot_bar1"] = "impending";
+			ret["display_username"] = true;
+			ret["hasgarbage"] = true;
+			ret["bgmnoreset"] = true;
+			ret["neverstopbgm"] = true;
+			ret["clutch"] = false;
+			ret["garbagespeed"] = rule.GarbageSpeed;
+			ret["garbagecap"] = rule.GarbageCap;
+			ret["garbagemultiplier"] = rule.multiplier;
+			ret["garbagemargin"] = 0;
+			ret["garbageincrease"] = 0;
+			ret["forfeit_time"] = 150;
+			ret["locktime"] = 999999999;
+			ret["infinite_movement"] = true;
+			ret["allow180"] = true;
+			ret["manual_allowed"] = false;
+			ret["b2bchaining"] = true;
+			ret["b2bcharge_base"] = 3;
+			ret["allclear_b2b_sends"] = true;
+			ret["allclear_b2b_dupes"] = false;
+			ret["nolockout"] = rule.lockout == 0;
+			ret["noextrawidth"] = true;
+			ret["song"] = "none";
+			ret["latencymode"] = "low";
+			ret["handling"] = h.build();
+			ret["gameid"] = u.id;
+			ret["username"] = u.name;
+			ret["passthrough"] = "limited";
+			ret["seed_random"] = false;
+			return ret;
+		}
+	};
+	struct Result {
+		static json build(const bool& alive) {
+			json j;
+			j["gameoverreason"] = alive ? "winner" : "garbagesmash";
+			return j;
+		}
+	};
+	struct RoundResult {
+		static json build(const User& u, const bool& alive, const u32& frames, const Stats& s) {
+			json ret = u.build();
+			ret["alive"] = alive;
+			ret["active"] = true;
+			ret["lifetime"] = (u32)(frames * 16.7);
+			ret["stats"] = s.build();
+			return ret;
+		}
+	};
+	struct Leaderboard {
+		static json build(const User& u, const Stats& s, const u16& wins) {
+			json ret = u.build();
+			ret["active"] = true;
+			ret["wins"] = wins;
+			ret["stats"] = s.build();
+			return ret;
+		}
+	};
+	struct IGEData {
+		u32 id;
+		IGEType type;
+		struct {
+			u16 cid;
+			u16 amt;
+			u8 column;
+			json build() const {
+				json ret;
+				ret["type"] = "garbage";
+				ret["amt"] = amt;
+				ret["cid"] = cid;
+				ret["column"] = column;
+				return ret;
 			}
-			undoSteps = 0;
+		}data;
+		json build() const {
+			json ret;
+			ret["id"] = id;
+			ret["type"] = igeKey[type];
+			ret["data"] = data.build();
+			return ret;
 		}
-		void reset(int undo) {
-			temp_evt.clear();
-			ige_reorder.clear();
-			undoSteps = undo;
-			evt.clear();
-			options.clear();
-			endGameStat.clear();
-			totalFrames = 0;
+	};
+	struct Key {
+		float subframe;
+		Input input;
+		json build() const {
+			json ret;
+			ret["key"] = key[input];
+			ret["subframe"] = subframe;
+			return ret;
 		}
-		// no need to reset
-		void setUSer(std::string username, std::string id = "0") {
-			info["user"]["username"] = username;
-			info["user"]["_id"] = id;
-		}
-		// no need to reset
-		void setHandling(int arr, int das, int sdf) {
-			handling = {
-				{"arr",arr},
-				{"das",das},
-				{"dcd",0},
-				{"sdf",(sdf == 0)?60:double(200)/sdf},
-				{"safelock",true},
-				{"cancel",true}
-			};
-		}
-		void setWin(bool win) {
-			info["success"] = win;
-		}
-		void setEndGameStat(int totalFrame, double apm, double pps, double vs) {
-			endGameStat["apm"] = apm;
-			endGameStat["pps"] = pps;
-			endGameStat["vsscore"] = vs;
-			evt["frames"] = totalFrame;
-		}
-		void setOption(unsigned seed, int cap, bool nolockout) {
-			options = {
-				{"version",15},
-				{"seed_random",false},
-				{"seed",seed},
-				{"g",0},
-				{"stock",0},
-				{"countdown",true},
-				{"countdown_count",3},
-				{"countdonw_interval",1000},
-				{"precountdown",5000},
-				{"prestart",1000},
-				{"zoominto","slow"},
-				{"slot_counter1","stopwatch"},
-				{"slot_counter2","attack"},
-				{"slot_counter3","pieces"},
-				{"slot_counter4",0},
-				{"slot_counter5","vs"},
-				{"slot_bar1","impending"},
-				{"display_fire",false},
-				{"display_username",true},
-				{"hasgarbage",true},
-				{"neverstopbgm",true},
-				{"display_next",true},
-				{"display_hold",true},
-				{"gmargin",3600},
-				{"gincrease",0},
-				{"garbagemultiplier",1},
-				{"garbagemargin",0},
-				{"garbageincrease",0},
-				{"garbagecap", cap},
-				{"garbagecapincrease",0},
-				{"garbagecapmax",40},
-				{"bagtype","7bag"},
-				{"spinbonuses","T-spins"},
-				{"kickset","SRS+"},
-				{"nextcount",5},
-				{"allow_harddrop",true},
-				{"display_shadow",true},
-				{"locktime",99999},
-				{"garbagespeed",1},
-				{"forfeit_time",150},
-				{"are",0},
-				{"lineclear_are",0},
-				{"infinitemovement",true},
-				{"lockresets",15},
-				{"allow180",true},
-				{"manual_allowed",false},
-				{"b2bchaining",true},
-				{"clutch",true},
-				{"nolockout", nolockout},
-				{"passthrough","zero"},
-				{"latencypreference","low"},
-				{"noscope",true},
-				{"username",info["user"]["username"]},
-				{"physical",false},
-				{"boardwidth",10},
-				{"boardheight",20},
-				{"boardbuffer",20},
-				{"ghostskin","tetrio"},
-				{"boardskin","generic"},
-				{"minoskin",{
-					{"z","tetrio"},
-					{"l","tetrio"},
-					{"o","tetrio"},
-					{"s","tetrio"},
-					{"i","tetrio"},
-					{"j","tetrio"},
-					{"t","tetrio"},
-					{"other","tetrio"},
-				}}
-			};
-		}
-		void insertStartEvent() {
-
-		}
-		void queueCheck() {
-			int totalStoredSteps = 0;
-			for (auto it = temp_evt.begin(); it != temp_evt.end(); it++) {
-				if (it->done) totalStoredSteps++;
-			}
-			int excessSteps = max(0, totalStoredSteps - undoSteps);
-			while (excessSteps--) {
-				flushOneStep();
-			}
-		}
-		void flushOneStep() {
-			for (auto it = temp_evt.front().evts.begin(); it != temp_evt.front().evts.end(); it++) {
-				if ((*it)["type"] == "ige") {
-					ige_reorder.push_back(*it);
-					continue;
-				}
-				while (!ige_reorder.empty() && ige_reorder.front()["frame"] <= (*it)["frame"]) {
-					this->evt["events"].push_back(ige_reorder.front());
-					ige_reorder.pop_front();
-				}
-				this->evt["events"].push_back(*it);
-			}
-			temp_evt.pop_front();
-		}
-		void flush() {
-			while (!temp_evt.empty()) {
-				flushOneStep();
-			}
-			while (!ige_reorder.empty()) {
-				this->evt["events"].push_back(ige_reorder.front());
-				ige_reorder.pop_front();
-			}
-		}
-		bool undoReady() {
-			return !temp_evt.empty();
-		}
-		void clear_cur_move() {
-			if (temp_evt.back().evts.empty()) return;
-			std::deque<json> iges;
-			while (!temp_evt.back().evts.empty()) {
-				if (temp_evt.back().evts.back()["type"] == "ige") {
-					iges.push_front(temp_evt.back().evts.back());
-					temp_evt.back().evts.pop_back();
-				}
-				else {
-					temp_evt.back().evts.pop_back();
-				}
-			}
-			temp_evt.back().evts.clear();
-			while (!iges.empty()) {
-				temp_evt.back().evts.push_back(iges.front());
-				iges.pop_front();
-			}
-		}
-		void commitStep() {
-			temp_evt.back().done = true;
-		}
-		void insertTmpEvent(json evt) {
-			if (temp_evt.empty() || temp_evt.back().done) {
-				temp_evt.push_back({});
-				temp_evt.back().done = false;
-			}
-			temp_evt.back().evts.push_back(evt);
-		}
-		std::deque<json> getIGE_events() {
-			std::deque<json> iges;
-			while (!temp_evt.back().evts.empty()) {
-				if (temp_evt.back().evts.back()["type"] == "ige") {
-					iges.push_front(temp_evt.back().evts.back());
-				}
-				temp_evt.back().evts.pop_back();
-			}
-			return iges;
-		}
-		void undo(bool is_AI = false) {
-			if (!temp_evt.back().done) temp_evt.pop_back();
-			std::deque<json> iges = getIGE_events();
-			temp_evt.pop_back();
-			while (!is_AI && !iges.empty()) {
-				insertTmpEvent(iges.front());
-				iges.pop_front();
-			}
-		}
-		json initEvent(int evt, int frame, void* param, double subframe = 0.0) {
-			json event;
-			event["frame"] = frame;
-			int k;
-			atk_t atk;
-			bool win;
-			switch (evt) {
-			case FULL:
-				event["type"] = "full";
-				event["data"] = {
-					{"game", {
-						{"board",board},
-						{"handling",handling},
-						{"playing", true}
-						}
-					},
-					{"options",options }
-				};
-				break;
-			case START:
-				event["type"] = "start";
-				event["data"] = json::object();
-				break;
-			case TARGETS:
-				event["type"] = "targets";
-				event["data"] = {
-					{"id","diyusi"},
-					{"frame",frame},
-					{"type","targets"},
-					{"data", json::array({info["user"]["_id"] == 0 ? "1" : "0"})}
-				};
-				break;
-			case KEYDOWN:
-				k = *(int*)param;
-				while (!(temp_evt.empty() || temp_evt.back().evts.empty()) &&
-					((frame <= temp_evt.back().evts.back()["frame"] && temp_evt.back().evts.back()["data"]["key"] == "hardDrop") ||
-						frame < temp_evt.back().evts.back()["frame"])) {
-					++frame;
-				}
-				event["frame"] = frame;
-				event["type"] = "keydown";
-				event["data"] = {
-					{"key",key[k]},
-					{"subframe",subframe}
-				};
-				break;
-			case KEYUP:
-				while (!temp_evt.empty() && !temp_evt.back().evts.empty() && frame < temp_evt.back().evts.back()["frame"]) {
-					++frame;
-				}
-				event["frame"] = frame;
-				k = *(int*)param;
-				event["type"] = "keyup";
-				event["data"] = {
-					{"key",key[k]},
-					{"subframe",subframe}
-				};
-				break;
-			case IGE:
-				atk = *(atk_t*)param;
-				event["type"] = "ige";
-				event["data"] = {
-					{"type","ige"},
-					{"data",{
-						{"type","interaction"},
-						{"sent_frame", frame},
-						{"cid",++cid},
-						{"data",{
-							{"type","garbage"},
-							{"amt",atk.atk},
-							{"x",0},{"y",0},
-							{"column",atk.pos}
-							}
-						}
-						}
-					},
-					{"frame",frame},
-					{"id",++id}
-				};
-				break;
-			case IGE_C:
-				atk = *(atk_t*)param;
-				event["type"] = "ige";
-				event["data"] = {
-					{"type","ige"},
-					{"data",{
-						{"type","interaction_confirm"},
-						{"sent_frame", frame},
-						{"cid",cid},
-						{"data",{
-							{"type","garbage"},
-							{"amt",atk.atk},
-							{"x",0},{"y",0},
-							{"column",atk.pos}
-							}
-						}
-						}
-					},
-					{"frame",frame},
-					{"id",++id}
-				};
-				break;
-			case END:
-				win = *(bool*)param;
-				event["type"] = "end";
-				event["data"] = {
-					{"reason",(win) ? "winner" : "topout"},
-					{"export",{{"aggregatestats",endGameStat}}}
-				};
-				break;
+	};
+	union Data {
+		IGEData ige;
+		Key key;
+		json build(const EventType& type) const {
+			switch (type) {
+			case EventType::IGE:
+				return ige.build();
+			case EventType::kDown:
+			case EventType::kUp:
+				return key.build();
 			default:
-				break;
-			}
-			return event;
-		}
-		void insertEvent(int evt, int frame, void* param, double subframe = 0.0) {
-			json event = initEvent(evt, frame, param, subframe);
-			if (undoSteps == 0 || (evt == FULL || evt == START || evt == TARGETS || evt == END)) {
-				this->evt["events"].push_back(event);
-			}
-			else {
-				insertTmpEvent(event);
-			}
-			if (evt == IGE) {
-				insertEvent(IGE_C, frame, param);
+				return json();
 			}
 		}
-		json getInfo() {
-			return info;
+	};
+	struct Event {
+		u32 frame;
+		Data data;
+		EventType type;
+		json build() const {
+			json ret;
+			ret["frame"] = frame;
+			ret["type"] = eventKey[type];
+			ret["data"] = data.build(type);
+			return ret;
 		}
-		json getEvents() {
+	};
+	class EventManager {
+	private:
+		std::vector<Event> events;
+		u16 commits;
+	public:
+		void push(const u32& frame, const EventType& type, const Data& data) {
+			events.push_back({ frame, data, type });
+		}
+		void commit() {
+			++commits;
+			events.push_back({ 0, Data(), EventType::checkpoint });
+		}
+		void discardAll() {
+			while (!events.empty() && events.back().type != EventType::checkpoint) {
+				events.pop_back();
+			}
+		}
+		void discard() {
+			std::vector<Event> ige;
+			while (!events.empty()) {
+				auto& back = events.back();
+				if (back.type == EventType::IGE) {
+					ige.push_back(back);
+				}
+				else if (back.type == EventType::checkpoint) {
+					break;
+				}
+				events.pop_back();
+			}
+			events.insert(events.end(), ige.rbegin(), ige.rend());
+		}
+		int size() const {
+			return events.size();
+		}
+		void slice() {
+			if (commits <= 1) {
+				discardAll();
+				return;
+			}
+			while (!events.empty()) {
+				if (events.back().type == EventType::checkpoint) {
+					events.pop_back();
+					break;
+				}
+				events.pop_back();
+			}
+			discardAll();
+		}
+		void reset() {
+			events.clear();
+			commits = 0;
+		}
+		std::vector<Event> raw() const {
+			std::vector<Event> ret;
+			for (const auto& e : events) {
+				if (e.type != EventType::checkpoint) {
+					ret.push_back(e);
+				}
+			}
+			return ret;
+		}
+		json build(const u32& frames) const {
+			json ret;
+			ret["frames"] = frames;
+			{
+				auto& evts = ret["events"];
+				for (const auto& e : events) {
+					if (e.type != EventType::checkpoint) {
+						evts.push_back(e.build());
+					}
+				}
+			}
+			return ret;
+		}
+	};
+	class IGEManager {
+	private:
+		u32 id;
+		u16 cid;
+	public:
+		std::array<IGEData, 2> raw(const u32& frame, const  u16& amt, const u8& pos) {
+			IGEData ret_1{};
+			ret_1.id = id++;
+			ret_1.type = IGEType::I;
+			ret_1.data = { ++cid, amt, pos };
+			IGEData ret_2 = ret_1;
+			ret_2.id = id++;
+			ret_2.type = IGEType::IC;
+			return { ret_1, ret_2 };
+		}
+
+		void reset() {
+			id = 0;
+			cid = 0;
+		}
+
+		IGEManager() {}
+	};
+	class KeyManager {
+	private:
+		int lastFrame;
+		double subFrame;
+	public:
+		void reset() {
+			lastFrame = 0;
+			subFrame = 0;
+		}
+		Event raw(const u32& frame, const  InputType& t, const Input& i) {
+			if (lastFrame != frame) {
+				lastFrame = frame;
+				subFrame = 0;
+			}
+			Event evt{};
+			evt.frame = frame;
+			evt.type = (EventType)t;
+			evt.data.key.input = i;
+			evt.data.key.subframe = subFrame;
+			subFrame += 0.1;
 			return evt;
 		}
+		KeyManager() {}
 	};
-	class GameRecord
-	{
-		json game;
+	class Player {
+	private:
+		User self;
+		EventManager rp;
+		IGEManager ige;
+		KeyManager k;
+		Handling handling;
+		Stats statsAcc;
+		u16 wins;
+		u32 seed;
+		Stats computeAvg(const u32& matches) const {
+			Stats s;
+			s.apm = statsAcc.apm / matches;
+			s.pps = statsAcc.pps / matches;
+			s.vs = statsAcc.vs / matches;
+			return s;
+		}
 	public:
-		GameRecord() {
-			game["board"] = json::array();
-			game["replays"] = json::array();
+		Player(User u, Handling h) : self(u), handling(h), statsAcc{}, wins(0), seed(0) {}
+		Player() {}
+		json build(const bool& alive, const u32& frames, const Stats& s, const tetris_rule& rule) {
+			statsAcc.apm += s.apm;
+			statsAcc.pps += s.pps;
+			statsAcc.vs += s.vs;
+			json ret = RoundResult::build(self, alive, frames, s);
+			ret["replay"] = rp.build(frames);
+			ret["replay"]["options"] = rule.season == 1 ? Options::buildS1(self, handling, seed, rule) : Options::buildS2(self, handling, seed, rule);
+			ret["replay"]["result"] = Result::build(alive);
+			if (alive) {
+				++wins;
+			}
+			return ret;
 		}
-		void insertGame(playerRecord r) {
-			game["board"].push_back(r.getInfo());
-			game["replays"].push_back(r.getEvents());
+		json buildLb(const u32& matches) const {
+			return Leaderboard::build(self, computeAvg(matches), wins);
 		}
-		void reset(){
-			game.clear();
-			game["board"].clear();
-			game["replays"].clear();
+		json computeStats(const u32& matches) const {
+			return computeAvg(matches).build();
 		}
-		json getGame() {
-			return game;
+		int eventSize() const {
+			return rp.size();
+		}
+		void setSeed(const u32& seed) {
+			this->seed = seed;
+		}
+		void start() {
+			rp.reset();
+			ige.reset();
+			k.reset();
+			rp.push(0, EventType::begin, {});
+			rp.commit();
+		}
+		void end(const u32& frame) {
+			rp.push(frame, EventType::stop, {});
+		}
+		void move(const u32& frame, const InputType& t, const Input& i) {
+			rp.push(frame, (EventType)t, k.raw(frame, t, i).data);
+			if (t == InputType::keyUp && i == Input::hardDrop) {
+				rp.commit();
+			}
+		}
+		void undo() {
+			rp.slice();
+		}
+		void recvAttack(const u32& frame, const  u16& amt, const  u8& pos) {
+			for (auto& data : ige.raw(frame, amt, pos)) {
+				rp.push(frame, EventType::IGE, (Data)data);
+			}
+		}
+		void clearCurrentMove() {
+			rp.discard();
 		}
 	};
-	class Replay
-	{
-	std::string filename;
-	json r;
-	public:
-	Replay(std::string filename, std::string timestamp) {
-		this->filename = filename;
-		r["ts"] = timestamp;
-		r["ismulti"] = true;
-		r["data"] = json::array();
-		r["endcontext"] = json::array();
-	}
-	void reset(std::string filename, std::string timestamp) {
-		this->filename = filename;
-		r["ts"] = timestamp;
-		r["data"].clear();
-	}
-	void toFile() {
-		std::ofstream f;
-		f.open(this->filename + ".ttrm");
-		f << r;;
-		f.close();
-	}
-	std::string getFilename() {
-		return this->filename + ".ttrm";
-	}
-	void setUser(std::string user1, std::string user2, std::string user1ID = "0", std::string user2ID = "0") {
-		json juser1 = {
-			{ "user",{{"_id",user1ID}, {"username",user1}} },
-			{ "active",true }
-		};
-		json juser2 = {
-			{ "user",{{"_id",user2ID}, {"username",user2}} },
-			{ "active",true }
-		};
-		r["endcontext"].push_back(juser1);
-		r["endcontext"].push_back(juser2);
 
-	}
-	void insertGame(GameRecord g) {
-		r["data"].push_back(g.getGame());
-	}
+	class PlayerManager {
+	private:
+		std::string filename;
+		std::array<Player, 2> p;
+		json header;
+		json leaderboard;
+		json roundReplay;
+		u32 matches;
+		tetris_rule rule;
+		u32 frames;
+		u32 lastHarddropFrames;
+		bool exported;
+
+		std::string isoTs() {
+			using namespace std::chrono;
+
+			auto now = system_clock::now();
+			auto now_time_t = system_clock::to_time_t(now);
+			auto ms = duration_cast<milliseconds>(now.time_since_epoch()) % 1000;
+			std::tm utc_tm = *std::gmtime(&now_time_t);
+
+			std::ostringstream oss;
+			oss << std::put_time(&utc_tm, "%Y-%m-%dT%H:%M:%S")
+				<< '.' << std::setfill('0') << std::setw(3) << ms.count()
+				<< 'Z';
+
+			return oss.str();
+		}
+
+		std::string fileTs() {
+			std::time_t now = std::time(nullptr);
+			std::tm localTime{};
+			localtime_s(&localTime, &now);
+			std::ostringstream oss;
+			oss << std::put_time(&localTime, "%d-%m-%Y %H-%M-%S");
+			return oss.str();
+		}
+	public:
+		PlayerManager(const std::array<std::string, 2>& _name, const std::array<Handling, 2>& _handling, const tetris_rule& rule)
+			: frames(0), matches(0), rule(rule), exported(true) {
+			std::array<User, 2> _user = { User{0, _name[0]}, {1, _name[1]} };
+			for (int i = 0; i < 2; ++i) {
+				p[i] = Player(_user[i], _handling[i]);
+			}
+			header["users"] = json::array({ _user[0].build(), _user[1].build() });
+			header["ts"] = isoTs();
+			header["id"] = nullptr;
+			header["gamemode"] = nullptr;
+			header["version"] = 1;
+			filename = fileTs() + ".ttrm";
+		}
+		void reportGame(const std::array<Stats, 2>& _stats, const int& winIdx) {
+			if (!frames) {
+				return;
+			}
+			json round{};
+			for (int i = 0; i < 2; ++i) {
+				bool win = winIdx == i;
+				p[i].end(frames + win * 5);
+				round.push_back(p[i].build(win, frames, _stats[i], rule));
+			}
+			roundReplay = round;
+			frames = 0;
+			++matches;
+		}
+		void recvAttack(const int& idx, const u16& amt, const u8& pos) {
+			p[idx].recvAttack(frames, amt, pos);
+		}
+		void setSeed(const int& idx, const u32& seed) {
+			p[idx].setSeed(seed);
+		}
+		void start() {
+			roundReplay.clear();
+			frames = 0;
+			lastHarddropFrames = 0;
+			p[0].start();
+			p[1].start();
+			exported = false;
+		}
+		void exportFile() {
+			if (exported) {
+				return;
+			}
+			json output;
+			{
+				std::ifstream ifs(filename);
+				std::string read((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+
+				try {
+					output = json::parse(read);
+				}
+				catch (...) {
+					output = header;
+				}
+			}
+			{
+				auto& replay = output["replay"];
+				replay["leaderboard"] = json::array({ p[0].buildLb(matches), p[1].buildLb(matches) });
+				replay["rounds"].push_back(roundReplay);
+			}
+			{
+				std::ofstream ofs(filename);
+				if (ofs) {
+					ofs << output.dump();
+				}
+			}
+			exported = true;
+		}
+		void performMove(const int& idx, const InputType& t, const  Input& i) {
+			if (!frames) {
+				tick(true);
+			}
+			p[idx].move(frames, t, i);
+			if (idx == 0 && t == InputType::keyDown && i == Input::hardDrop) {
+				lastHarddropFrames = frames;
+			}
+		}
+		int getFrames() const {
+			return frames;
+		}
+		int getLastHarddropFrames() const {
+			return lastHarddropFrames;
+		}
+		void tick(const bool& begin = false) {
+			if (!begin && !frames) {
+				return;
+			}
+			++frames;
+		}
+		void undo() {
+			frames = lastHarddropFrames;
+			p[0].undo();
+			p[1].undo();
+		}
+		void clearCurrentMove(const int& idx) {
+			p[idx].clearCurrentMove();
+		}
 	};
 }
 #endif

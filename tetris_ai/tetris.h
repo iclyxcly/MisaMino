@@ -57,8 +57,7 @@ namespace AI {
             m_state = STATE_INIT;
             reset ( 0, 10, 20 );
         }
-        // use tetrio way to generate bag of minos
-        void genNextTetrio() {
+        void genNext() {
             // I1 T2 L3 J4 Z5 S6 O7
             int m[] = {5,3,7,6,1,4,2}; // ["z", "l", "o", "s", "i", "j", "t"]
             t_rand.shuffleArray(m);
@@ -66,35 +65,12 @@ namespace AI {
                 m_next.push_back(AI::getGem(m[i], 0));
             }
         }
-        void genNext() {
-            int m[] = {1,2,3,4,5,6,7};
-            int s[7];
-            int v = m_rand.randint(5040);
-            int mod = 5040 / 7;
-            for ( int i = 6; i > 0; --i ) {
-                s[6-i] = m[v / mod];
-                for ( int j = v / mod; j < 6; ++j) {
-                    m[j] = m[j+1];
-                }
-                v %= mod;
-                mod /= i;
-            }
-            s[6] = m[0];
-            for ( int i = 0; i < 7; ++i ) {
-                m_next.push_back(AI::getGem( s[i], 0));
-            }
-        }
         void reset (unsigned seed, signed char w, signed char h) {
             m_pool.reset( w, h );
-            m_rand.seed( seed );
             t_rand.setSeed(seed);
             m_next.clear();
             while (m_next.size() < 100)
-                if(TETRIO_ATTACK_TABLE) genNextTetrio();
-                else genNext();
-            //for ( int i = 0; i < 32; ++i ) {
-            //    m_next[i] = AI::getGem( m_rand.randint(7) + 1, 0);
-            //}
+                genNext();
             m_state = STATE_READY;
             m_cur = AI::getGem(0, 0);
             m_cur_x = AI::gem_beg_x;
@@ -105,21 +81,11 @@ namespace AI {
             m_clearGarbageLines = 0;
             m_attack = 0;
             m_max_combo = 0;
-            m_frames = 0;
-            m_drop_frame = 0;
             m_clear_info.reset( 0 );
             memset( m_color_pool, 0, sizeof( m_color_pool ) );
         }
         bool tryXMove(int dx) {
             if ( m_state != STATE_MOVING ) return false;
-            if (m_pool.isCollide(m_cur_x + dx, m_cur_y, m_cur))
-                return false;
-            m_cur_x += dx;
-            wallkick_spin = 0;
-            return true;
-        }
-        bool tryARRMove(int dx) {
-            if (m_state != STATE_MOVING) return false;
             if (m_pool.isCollide(m_cur_x + dx, m_cur_y, m_cur))
                 return false;
             m_cur_x += dx;
@@ -142,7 +108,7 @@ namespace AI {
                 if ( dSpin == 1 ) spin = 0;
                 int tmp_x = m_cur_x;
                 int tmp_y = m_cur_y;
-                if ((TETRIO_ATTACK_TABLE && m_pool.wallkickTestSRS_PLUS(m_cur_x, m_cur_y, gem, spin)) || (!TETRIO_ATTACK_TABLE && m_pool.wallkickTest(m_cur_x, m_cur_y, gem, spin))) {
+                if (m_pool.wallkickTestSRS_PLUS(m_cur_x, m_cur_y, gem, spin)) {
                     m_cur = gem;
                     m_pool.reportXYRCoord(tmp_x, tmp_y, dSpin);
                     wallkick_spin = 2;
@@ -162,7 +128,7 @@ namespace AI {
             if ( m_state != STATE_MOVING ) return false;
             AI::Gem gem = AI::getGem(m_cur.num, (m_cur.spin + 2) % 4);
             if (m_pool.isCollide(m_cur_x, m_cur_y, gem)) {
-                if (TETRIO_ATTACK_TABLE && m_pool.wallkickTest180(m_cur_x, m_cur_y, gem)) {
+                if (m_pool.wallkickTest180(m_cur_x, m_cur_y, gem)) {
 					m_cur = gem;
 					wallkick_spin = 1;
 					return true;
@@ -235,10 +201,9 @@ namespace AI {
             wallkick_spin = m_pool.WallKickValue(m_cur.num, m_cur_x, m_cur_y, m_cur.spin, wallkick_spin);
             m_pool.paste( m_cur_x, m_cur_y, m_cur );
             paste();
-            m_drop_frame = m_frames;
             m_state = STATE_PASTED;
             // in tetrio, if dropped piece is all above 20 height, the game end.
-            if (TETRIO_ATTACK_TABLE && AI::isLockOutEnable()) {
+            if (AI::isLockOutEnable()) {
                 int low = 0; // tetrimino's lowest position, how much lower than m_cur_y
                 // m_cur_y is the spin pivot, which is at bitmap[1], so if bitmap[2] not zero >>> at least 1 lower than pivot
                 for (int i = 2; i < 4; i++) {
@@ -275,11 +240,11 @@ namespace AI {
                 }
             }
         }
-        void clearLines () {
+        void clearLines (int mul) {
             if ( m_state != STATE_PASTED ) return;
             m_clearLines = m_pool.clearLines( wallkick_spin );
             color_pool_clearLines();
-            m_attack = m_pool.getAttack( m_clearLines, wallkick_spin );
+            m_attack = m_pool.getAttack( m_clearLines, wallkick_spin, mul );
             m_max_combo = std::max(m_max_combo, m_pool.combo - 1);
 
             m_clear_info.clears = m_clearLines;
@@ -386,8 +351,7 @@ namespace AI {
         void removeNext() {
             m_next.pop_front();
             while (m_next.size() < 100)
-                if (TETRIO_ATTACK_TABLE) genNextTetrio();
-                else genNext();
+                genNext();
             //m_next[15] = AI::getGem( m_rand.randint(7) + 1, 0);
         }
         bool newpiece() {
@@ -408,8 +372,7 @@ namespace AI {
             m_state = STATE_MOVING;
             return true;
         }
-        bool game() {
-            ++m_frames;
+        bool game(int mul) {
             switch (m_state) {
             case STATE_MOVING:
                 {
@@ -417,7 +380,7 @@ namespace AI {
                 break;
             case STATE_PASTED:
                 {
-                    clearLines();
+                    clearLines(mul);
                 }
             case STATE_READY:
                 {
@@ -458,7 +421,6 @@ namespace AI {
             return m_state != STATE_OVER;
         }
         int m_state;
-        Random m_rand;
         RandomTetrio t_rand;
         AI::GameField m_pool;
         AI::Gem m_cur;
@@ -474,8 +436,6 @@ namespace AI {
         int m_clearGarbageLines;
         int m_attack;
         int m_max_combo;
-        int m_frames;
-        int m_drop_frame;
         clear_info m_clear_info;
     };
 

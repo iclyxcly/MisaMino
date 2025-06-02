@@ -35,3 +35,6 @@
 *.vsidx
 *.lock
 *.ttrm
+/tetris_ai/Tspin/Debug
+/tetris_ai/.vs
+/tetris_ai/Tspin/XP_Release

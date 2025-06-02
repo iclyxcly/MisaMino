@@ -1,18 +1,7 @@
-#ifdef XP_RELEASE
 #define PUBLIC_VERSION      1 // 发布模式
 #define GAMEMODE_4W         0 // 4w模式
-#define TETRIO_ATTACK_TABLE 1
-#define DELAYED_ATTACK		1
 #define AI_TRAINING_SLOW    0
 #define USE4W               1
-#else
-#define PUBLIC_VERSION      0
-#define GAMEMODE_4W         0
-#define PLAYER_WAIT         0
-#define AI_TRAINING_SLOW    1 // 训练模式慢速演示
-#define USE4W               0
-#endif
-#define ATTACK_MODE         1 // 垃圾行：0空气 1TOP 2火拼
 #define AI_SHOW             0 // 不相互攻击，围观AI
 #if AI_TRAINING_SLOW
 #define AI_TRAINING_DEEP    16
