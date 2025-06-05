@@ -1821,7 +1821,7 @@ namespace AI {
         _beginthread(AI_Thread, 0, new AI_THREAD_PARAM(ret_mov, flag, ai_param, pool, hold, cur, x, y, next, canhold, canAMini, upcomeAtt, maxDeep, searchDeep, level, player) );
         return 0;
     }
-    int RunAIDll(const AIDLL::CALL_TETRISAI &func, Moving& ret_mov, int& flag, const GameField& pool, int hold, Gem cur, int x, int y, const std::vector<Gem>& next, bool canhold, std::array<int, AIDLL::UPCOMEATT_SIZE> upcomeAtt, int & searchDeep, int level) {
+    int RunAIDll(const AIDLL::CALL_TETRISAI &func, Moving& ret_mov, int& flag, const GameField& pool, int hold, Gem cur, int x, int y, const std::vector<Gem>& next, std::array<int, AIDLL::UPCOMEATT_SIZE> upcomeAtt, int & searchDeep) {
         flag = 0;
         static std::map<char, int> outMap;
         if (outMap.empty()) {
@@ -1843,9 +1843,8 @@ namespace AI {
             flag = 1;
             using namespace AIDLL;
             Field f{ {0}, pool.width()};
-            Queue q{ {}, gemMap[pool.m_hold], gemMap[cur.num], canhold, !hold, x, y, cur.spin};
+            Queue q{ {}, gemMap[pool.m_hold], gemMap[cur.num], !hold, x, y, cur.spin};
             Status s{ pool.b2b, pool.combo, {} };
-            Config c{ level, (int)isEnableAllSpin() + 1, isClutchEnable(), isLockOutEnable(), spin180Enable()};
             for (int d = 0, s = pool.height(); d < FIELD_SIZE; ++d, --s) {
                 f.field[d] = pool.row[s];
             }
@@ -1875,19 +1874,16 @@ namespace AI {
             //        for (int i = 0; i < NEXT_SIZE; ++i) fprintf(file, "%d ", (int)q.next[i]);
             //        fprintf(file, "\n hold: %d\n active: %d\n canHold: %d\n curCanHold: %d\n x: %d\n y: %d\n r: %d\n\n",
             //            (int)q.hold, (int)q.active, q.canHold, q.curCanHold, q.x, q.y, q.r);
-
+            // 
             //        // Print Status
             //        fprintf(file, "Status:\n b2b: %d\n combo: %d\n upcomeAtt: ", s.b2b, s.combo);
             //        for (int i = 0; i < UPCOMEATT_SIZE; ++i) fprintf(file, "%d ", s.upcomeAtt[i]);
             //        fprintf(file, "\n\n");
-
-            //        // Print Config
-            //        fprintf(file, "Config:\n level: %d\n season: %d\n clutch: %d\n lockout: %d\n allow180: %d\n",
-            //            c.level, c.season, c.clutch, c.lockout, c.allow180);
+            // 
             //        fclose(file);
             //    }
             //}
-            const char* path = func(&f, &q, &s, &c);
+            const char* path = func(&f, &q, &s);
             ret_mov.movs.clear();
             while (*path) {
                 ret_mov.movs.push_back(outMap[*path]);

@@ -526,7 +526,6 @@ namespace RP {
 		u32 matches;
 		tetris_rule rule;
 		u32 frames;
-		u32 lastHarddropFrames;
 		bool exported;
 
 		std::string isoTs() {
@@ -590,7 +589,6 @@ namespace RP {
 		void start() {
 			roundReplay.clear();
 			frames = 0;
-			lastHarddropFrames = 0;
 			p[0].start();
 			p[1].start();
 			exported = false;
@@ -629,15 +627,12 @@ namespace RP {
 				tick(true);
 			}
 			p[idx].move(frames, t, i);
-			if (idx == 0 && t == InputType::keyDown && i == Input::hardDrop) {
-				lastHarddropFrames = frames;
-			}
 		}
 		int getFrames() const {
 			return frames;
 		}
-		int getLastHarddropFrames() const {
-			return lastHarddropFrames;
+		void setFrames(const u32& f) {
+			frames = f;
 		}
 		void tick(const bool& begin = false) {
 			if (!begin && !frames) {
@@ -645,10 +640,8 @@ namespace RP {
 			}
 			++frames;
 		}
-		void undo() {
-			frames = lastHarddropFrames;
-			p[0].undo(false);
-			p[1].undo(true);
+		void undo(const int &idx) {
+			p[idx].undo(idx);
 		}
 		void clearCurrentMove(const int& idx) {
 			p[idx].clearCurrentMove();

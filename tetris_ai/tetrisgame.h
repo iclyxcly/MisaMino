@@ -22,12 +22,10 @@ typedef struct {
 struct tetris_ai {
 	int style;
 	int level;
-	int PieceMul;
 	std::string plugin;
 	tetris_ai() {
 		style = 2;
 		level = 4;
-		PieceMul = 0;
 		plugin = "dllai.dll";
 	}
 };
@@ -40,6 +38,7 @@ struct tetris_rule {
 	int InfinityHold;
 	int GarbageCap;
 	int GarbageSpeed;
+	int CanHold;
 	int lockout;
 	int clutch;
 	int multiplier;
@@ -53,6 +52,7 @@ struct tetris_rule {
 		InfinityHold = 0;
 		GarbageCap = 8;
 		GarbageSpeed = 1;
+		CanHold = 1;
 		next = 6;
 		multiplier = 1;
 		lockout = 0;
@@ -186,7 +186,7 @@ public:
 		ai_delay = 0;
 		env_change = 0;
 		ai_movs.movs.clear();
-		n_pieces = 0;
+		n_pieces = -1;
 		ai_last_deep = 0;
 		ai_movs_flag = -1;
 		accept_atts.clear();
@@ -243,6 +243,7 @@ public:
 		return ret;
 	}
 	bool tryHold() {
+		if (!hold) return false;
 		bool ret = Tetris::tryHold();
 		if (mSFXon && ret) {
 			GameSound::ins().mSFX_hold.play(m_lr);
@@ -250,6 +251,7 @@ public:
 		return ret;
 	}
 	bool tryInfinityHold() {
+		if (!hold) return false;
 		bool ret = Tetris::tryInfinityHold();
 		if (mSFXon && ret) {
 			GameSound::ins().mSFX_hold.play(m_lr);
@@ -397,6 +399,7 @@ public:
 	int ai_movs_flag;
 	int ai_last_deep;
 	int ai_delay;
+	AIDLL::CALL_INITAI pInitAI;
 	AIDLL::CALL_AINAME pAIName;
 	AIDLL::CALL_TETRISAI pTetrisAI;
 	int env_change;

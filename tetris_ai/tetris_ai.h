@@ -248,5 +248,5 @@ namespace AI {
     void GenMoving(const GameField& field, std::vector<MovingSimple> & movs, Gem cur, int x, int y, bool hold);
     void FindPathMoving(const GameField& field, std::vector<Moving> & movs, Gem cur, int x, int y, bool hold);
     int RunAI(Moving& ret_mov, int& flag, const AI_Param& ai_param, const GameField& pool, int hold, Gem cur, int x, int y, const std::vector<Gem>& next, bool canhold, bool canAMini, int upcomeAtt, int maxDeep, int & searchDeep, int level, int player);
-    int RunAIDll(const AIDLL::CALL_TETRISAI &func, Moving& ret_mov, int& flag, const GameField& pool, int hold, Gem cur, int x, int y, const std::vector<Gem>& next, bool canhold, std::array<int, AIDLL::UPCOMEATT_SIZE> upcomeAtt, int& searchDeep, int level);
+    int RunAIDll(const AIDLL::CALL_TETRISAI &func, Moving& ret_mov, int& flag, const GameField& pool, int hold, Gem cur, int x, int y, const std::vector<Gem>& next, std::array<int, AIDLL::UPCOMEATT_SIZE> upcomeAtt, int& searchDeep);
 }

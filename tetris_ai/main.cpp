@@ -16,9 +16,9 @@
 #include <functional>
 #include <Windows.h>
 
-#define GETPPS(t, p) ((p.getFrames()==0)?0:(float(t.n_pieces - 1) * 60.0 / p.getFrames()))
-#define GETAPM(t, p) ((p.getFrames()==0)?0:(float(t.total_atts) * 3600.0 / p.getFrames()))
-#define GETVSSCORE(t, p) (float(t.total_atts + t.m_clearGarbageLines) / max(1,t.n_pieces - 1) * GETPPS(t, p) * 100.0)
+#define GETPPS(t, p) ((p.getFrames()==0)?0:(t.n_pieces * 60.0 / p.getFrames()))
+#define GETAPM(t, p) ((p.getFrames()==0)?0:(t.total_atts * 3600.0 / p.getFrames()))
+#define GETVSSCORE(t, p) (float(t.total_atts + t.m_clearGarbageLines) / max(1,t.n_pieces) * GETPPS(t, p) * 100.0)
 #define UNDO_AVAILABLE (rule.turnbase && ai[0].style == 0)
 
 std::function<void()> EXPORT_FUNC;
@@ -110,7 +110,7 @@ void tetris_draw_next(const TetrisGame& tetris, PIMAGE* gem, int next, float sca
 	}
 	setcolor(EGERGB(0x40, 0x40, 0xff));
 	xyprintf(int(base_x + size_x * (tetris.poolw() + 5) + size_x / 2), int(base_y),
-		"NEXT %3d", (tetris.n_pieces - (tetris.m_pool.m_hold == AI::GEMTYPE_NULL)) - 1);
+		"NEXT %3d", tetris.n_pieces);
 	for (int i = 1; i <= 1; ++i) {
 		int bx = int(base_x + size_x * (tetris.poolw() + 5) + size_x / 2);
 		int by = int(base_y + size_y * 1);
@@ -315,7 +315,7 @@ void tetris_draw(const TetrisGame& tetris, const RP::PlayerManager mgr, bool sho
 			setlinestyle(DOTTED_LINE);
 			int lastbx = -1, lastby = 0;
 			for (int x = 0; x < tetris.poolw(); ++x) {
-				int y = min_y[x] + 2;
+				int y = min_y[x];
 				int bx = int(base_x + size_x * (x + 5));
 				int cap = (rule.GarbageCap == 0) ? INT_MAX : rule.GarbageCap;
 				int by = int(base_y_ + size_y * (y - min(atts, cap)));
@@ -340,7 +340,7 @@ void tetris_draw(const TetrisGame& tetris, const RP::PlayerManager mgr, bool sho
 			apl = double(tetris.total_atts) / tetris.total_clears;
 		}
 		if (tetris.n_pieces > 0) {
-			app = double(tetris.total_atts) / tetris.n_pieces;
+			app = double(tetris.total_atts) / std::max<double>(1, tetris.n_pieces);
 		}
 		rectprintf(
 			//int(base_x + size_x * (5+tetris.poolw())) + 1,
@@ -571,34 +571,28 @@ void loadAI(CProfile& config, tetris_ai ai[]) {
 			if (ai[i].level < 0) ai[i].level = 0;
 			if (ai[i].level > 10) ai[i].level = 10;
 		}
-		if (config.IsInteger("PieceMul")) {
-			ai[i].PieceMul = config.ReadInteger("PieceMul");
-			if (ai[i].PieceMul <= 0) ai[i].PieceMul = 1;
-		}
 		config.ReadString("dllplugin", ai[i].plugin);
 	}
 }
 void loadRule(CProfile& config, tetris_rule& rule) {
 	config.SetSection("Rule");
 	if (config.IsInteger("turnbase")) {
-		rule.turnbase = config.ReadInteger("turnbase");
+		rule.turnbase = !!config.ReadInteger("turnbase");
 	}
 	if (config.IsInteger("turn")) {
-		int turns = config.ReadInteger("turn");
-		if (turns < 1 && rule.turnbase > 0)turns = 1;
-		rule.turn = turns;
+		rule.turn = config.ReadInteger("turn");
+		if (rule.turn < 1 && rule.turnbase)rule.turn = 1;
 	}
 	if (config.IsInteger("next")) {
 		rule.next = config.ReadInteger("next");
 		if (rule.next < 0) rule.next = 0;
 	}
 	if (config.IsInteger("spin180")) {
-		rule.spin180 = config.ReadInteger("spin180");
+		rule.spin180 = !!config.ReadInteger("spin180");
 		AI::setSpin180(rule.spin180);
 	}
 	if (config.IsInteger("InfinityHold")) {
-		rule.InfinityHold = config.ReadInteger("InfinityHold");
-		if (rule.InfinityHold > 1)rule.InfinityHold = 1;
+		rule.InfinityHold = !!config.ReadInteger("InfinityHold");
 	}
 	if (config.IsInteger("Season")) {
 		rule.season = config.ReadInteger("Season");
@@ -609,7 +603,7 @@ void loadRule(CProfile& config, tetris_rule& rule) {
 		}
 	}
 	if (config.IsInteger("samesequence")) {
-		rule.samesequence = config.ReadInteger("samesequence");
+		rule.samesequence = !!config.ReadInteger("samesequence");
 	}
 	if (config.IsInteger("GarbageCap")) {
 		rule.GarbageCap = config.ReadInteger("GarbageCap");
@@ -618,17 +612,20 @@ void loadRule(CProfile& config, tetris_rule& rule) {
 		rule.GarbageSpeed = config.ReadInteger("GarbageSpeed");
 		if (rule.GarbageSpeed < 1) rule.GarbageSpeed = 1;
 	}
+	if (config.IsInteger("CanHold")) {
+		rule.CanHold = !!config.ReadInteger("CanHold");
+	}
 	if (config.IsInteger("GarbageMultiplier")) {
 		rule.multiplier = config.ReadInteger("GarbageMultiplier");
 		if (rule.multiplier < 1) rule.multiplier = 1;
 		if (rule.multiplier > 100) rule.multiplier = 100;
 	}
 	if (config.IsInteger("clutch")) {
-		rule.clutch = config.ReadInteger("clutch");
+		rule.clutch = !!config.ReadInteger("clutch");
 		AI::setClutch(rule.clutch);
 	}
 	if (config.IsInteger("lockout")) {
-		rule.lockout = config.ReadInteger("lockout");
+		rule.lockout = !!config.ReadInteger("lockout");
 		AI::setLockOut(rule.lockout);
 	}
 }
@@ -734,10 +731,6 @@ void mainscene() {
 		if (config.IsFloat("scale")) {
 			displayScale = config.ReadFloat("scale");
 		}
-
-		if (rule.turn != 1) {
-			ai[0].PieceMul = ai[1].PieceMul = 1;
-		}
 	}
 
 #if PUBLIC_VERSION == 0
@@ -761,6 +754,10 @@ void mainscene() {
 
 	int players_num = 2;
 	std::vector<TetrisGame> tetris(players_num);
+	if (!rule.CanHold) {
+		tetris[0].hold = false;
+		tetris[1].hold = false;
+	}
 	AI::Random rnd((unsigned)time(0));
 	int player_keys[8] = {
 		key_left,
@@ -819,6 +816,7 @@ void mainscene() {
 					if (pAIDllVersion && pAIDllVersion() == AI_DLL_VERSION) {
 						tetris[i].pAIName = (AIDLL::CALL_AINAME)GetProcAddress(hModule, "AIName");
 						tetris[i].pTetrisAI = (AIDLL::CALL_TETRISAI)GetProcAddress(hModule, "TetrisAI");
+						tetris[i].pInitAI = (AIDLL::CALL_INITAI)GetProcAddress(hModule, "InitAI");
 					}
 				}
 			}
@@ -1078,7 +1076,7 @@ void mainscene() {
 	double ai_time = 0;
 	int lastGameState = -1;
 
-	std::list<TetrisGame> saved_board[2];
+	std::list<std::pair<RP::u32, TetrisGame>> saved_board[2];
 	bool undo = false;
 	RP::Handling hdl{};
 	hdl.arr = player.arr;
@@ -1192,22 +1190,6 @@ void mainscene() {
 					if (game_pause) {
 						continue;
 					}
-					if (player_stratagy_mode && rule.turnbase
-						&& rule.turn > 1
-						&& k.msg == key_msg_down
-						&& (tetris[0].n_pieces - 1) / rule.turn > (tetris[1].n_pieces - 1) / rule.turn)
-					{
-						bool match = false;
-						for (int i = 0; i < 8; ++i) {
-							if (k.key == player_keys[i]) match = true;
-						}
-						for (int i = 0; i < 3; ++i) {
-							if (player_key_state[i] != 0) {
-								player_key_state[i] = 0;
-							}
-						}
-						if (match) continue;
-					}
 					if (k.msg == key_msg_up) {
 						for (int i = 0; i < 8; ++i) {
 							if (player_key_state[i] && (k.key == player_keys[i])) {
@@ -1271,7 +1253,6 @@ void mainscene() {
 						player_key_state[4] = 1;
 					}
 					if (k.key == player_keys[5] && player_key_state[5] == 0) {
-						ply.performMove(0, RP::InputType::keyDown, key2action[5]);
 						if ((rule.InfinityHold && tetris[0].tryInfinityHold()) || tetris[0].tryHold()) {
 							if (rule.InfinityHold && firstHold[0] && !tetris[0].m_hold) {
 								tetris[0].m_next.insert(tetris[0].m_next.begin(), AI::getGem(tetris[0].m_pool.m_hold, 0));
@@ -1334,7 +1315,18 @@ void mainscene() {
 								ply.setSeed(i, seed);
 								//tetris[i].reset( (unsigned)time(0) + ::GetTickCount() * i );
 								onGameStart(tetris[i], rnd, i); // basically useless
-								saved_board[i].push_back(tetris[i]);
+								if (tetris[i].pInitAI) {
+									AIDLL::Config c = {
+										ai[i].level,
+										(int)AI::isEnableAllSpin() + 1,
+										rule.GarbageCap,
+										tetris[i].hold,
+										AI::isClutchEnable(),
+										AI::isLockOutEnable(),
+										AI::spin180Enable()
+									};
+									tetris[i].pInitAI(&c);
+								}
 							}
 							ply.start();
 							if (player.sound_bgm) GameSound::ins().loadBGM(rnd);
@@ -1454,15 +1446,9 @@ void mainscene() {
 			for (int i = 0; i < players_num; ++i) {
 				if (tetris[i].ai_delay > 0) --tetris[i].ai_delay;
 				if (player_stratagy_mode) {
-					if (i != 0 && tetris[0].n_pieces == 1) continue;
-					if (rule.turnbase) {
-						if (i == 0 && (tetris[0].n_pieces - 1) * ai[1].PieceMul / rule.turn > (tetris[1].n_pieces - 1) * ai[0].PieceMul / rule.turn) continue;
-						if (i != 0 && (tetris[1].n_pieces - 1) * ai[0].PieceMul / rule.turn >= (tetris[0].n_pieces - 1) * ai[1].PieceMul / rule.turn) continue;
-					}
-					else {
-						if (i == 0 && !tetris[1].alive()) continue;
-						if (i != 0 && !tetris[0].alive()) continue;
-					}
+					if (i != 0 && !tetris[0].n_pieces) continue;
+					if (!tetris[i].alive()) continue;
+					if (tetris[i].waiting) continue;
 				}
 				//if ( tetris[i].mov_llrr ) {
 				//    if (0) ;
@@ -1644,8 +1630,8 @@ void mainscene() {
 										ply.recvAttack(j, att[i], tetris[j].genAttack(att[i], ply.getFrames() + rule.GarbageSpeed));
 									}
 
-									if (UNDO_AVAILABLE && j == 0 && saved_board[j].back().n_pieces == tetris[j].n_pieces) {
-										saved_board[j].back().accept_atts = tetris[j].accept_atts;
+									if (UNDO_AVAILABLE && j == 0 && saved_board[j].back().second.n_pieces == tetris[j].n_pieces) {
+										saved_board[j].back().second.accept_atts = tetris[j].accept_atts;
 									}
 									tetris[i].total_sent += att[i];
 									if (rule.turnbase) tetris[j].env_change = 2;
@@ -1656,15 +1642,20 @@ void mainscene() {
 						if (player_accept_attack && clearLines == 0) {
 							tetris[i].acceptAttack(rule.GarbageCap, ply.getFrames());
 						}
+
+						if (!tetris[i].n_pieces) {
+							saved_board[i].push_back({ply.getFrames(), tetris[i]});
+						}
 					}
 					// Have to record state before ai start to calculate
 					if (is_drop[i]) {
 						while (saved_board[i].size() > 100)
 							saved_board[i].pop_front();
-						saved_board[i].push_back(tetris[i]);
+						saved_board[i].push_back({ ply.getFrames(), tetris[i] });
 						is_drop[i] = false;
-						tetris[i].waiting = true;
-						tetris[!i].waiting = false;
+						
+						tetris[i].waiting = tetris[i].n_pieces % rule.turn == 0;
+						tetris[!i].waiting = !tetris[i].waiting;
 					}
 					if (tetris[i].env_change && tetris[i].ai_movs_flag == -1 && ((rule.turnbase && !tetris[i].waiting) || !rule.turnbase)) { // AI 计算
 						if ((ai_eve || ai[i].style) && tetris[i].alive()) {
@@ -1678,32 +1669,19 @@ void mainscene() {
 									upcomeAttArr[j] = tetris[i].accept_atts[j].atk;
 								}
 							}
-							int level = ai[i].level;
-							if (i == 1 && rule.turn == 1 && rule.turnbase && level > 9) { // 防2P被超越太多
-								if (tetris[0].n_pieces * ai[1].PieceMul - tetris[i].n_pieces * ai[0].PieceMul > 2) {
-									level = 9;
-								}
-							}
 							if (tetris[i].pTetrisAI) {
 								AI::RunAIDll(tetris[i].pTetrisAI, tetris[i].ai_movs, tetris[i].ai_movs_flag, tetris[i].m_pool, tetris[i].m_hold,
-									tetris[i].m_cur,
-									tetris[i].m_cur_x, tetris[i].m_cur_y, tetris[i].m_next, tetris[i].hold,
-									upcomeAttArr, deep, level);
+									tetris[i].m_cur, tetris[i].m_cur_x, tetris[i].m_cur_y, tetris[i].m_next, upcomeAttArr, deep);
 							}
 							else {
 								AI::RunAI(tetris[i].ai_movs, tetris[i].ai_movs_flag, tetris[i].m_ai_param, tetris[i].m_pool, tetris[i].m_hold,
 									tetris[i].m_cur,
 									tetris[i].m_cur_x, tetris[i].m_cur_y, tetris[i].m_next, tetris[i].hold, AI::isEnableAllSpin(), upcomeAtt,
-									deep, tetris[i].ai_last_deep, level, i);
+									deep, tetris[i].ai_last_deep, ai[i].level, i);
 							}
 							ai_time = (double)::GetTickCount() / 1000 - beg;
 							if (rule.turnbase && ai[0].style == 0) {
-								if (rule.turn == 1 && tetris[0].n_pieces * ai[1].PieceMul - tetris[i].n_pieces * ai[0].PieceMul > 1) {
-									ai_mov_time_base = ai_mov_time / 4;
-								}
-								else {
-									ai_mov_time_base = ai_mov_time;
-								}
+								ai_mov_time_base = ai_mov_time;
 								tetris[i].ai_delay = ai_mov_time_base + ai_mov_time_base / 3;
 							}
 							else {
@@ -1719,19 +1697,32 @@ void mainscene() {
 			}
 			if (!ai_eve) break;
 		}
-		//int p1_pieces = tetris[0].n_pieces / ai[0].PieceMul;
-		//int p2_pieces = tetris[1].n_pieces / ai[1].PieceMul;
-		//bool in_expectation = max(p1_pieces, p2_pieces) - min(p1_pieces, p2_pieces) <= max(ai[0].PieceMul, ai[1].PieceMul) - min(ai[0].PieceMul, ai[1].PieceMul);
 		// undo
-		if (UNDO_AVAILABLE && undo && saved_board[0].size() > 1 && tetris[1].ai_movs_flag == -1) {
+		if (UNDO_AVAILABLE && undo && saved_board[0].size() > 1 && tetris[1].waiting) {
 			lastGameState = 0;
-				saved_board[0].pop_back();
-				saved_board[1].pop_back();
-				ply.undo();
-			tetris[0] = saved_board[0].back();
-			tetris[1] = saved_board[1].back();
+			if (saved_board[0].size() != saved_board[1].size()) {
+				while (saved_board[0].size() != saved_board[1].size()) {
+					saved_board[0].pop_back();
+					ply.undo(0);
+				}
+			}
+			else {
+				for (int i = 0; i < 2; ++i) {
+					int turn = rule.turn;
+					while (turn && saved_board[i].size() > 1) {
+						saved_board[i].pop_back();
+						ply.undo(i);
+						--turn;
+					}
+				}
+			}
+			tetris[0] = saved_board[0].back().second;
+			tetris[1] = saved_board[1].back().second;
+			tetris[0].waiting = false;
+			tetris[1].waiting = true;
 			firstHold[0] = tetris[0].m_pool.m_hold == 0;
 			firstHold[1] = tetris[1].m_pool.m_hold == 0;
+			ply.setFrames(saved_board[1].back().first);
 			undo = false;
 		}
 		else if (UNDO_AVAILABLE && undo && saved_board[0].size() > 1) {
@@ -1761,7 +1752,19 @@ void mainscene() {
 						tetris[i].reset(seed, pass);
 						ply.setSeed(i, seed);
 						onGameStart(tetris[i], rnd, i);
-						saved_board[i].push_back(tetris[i]);
+						if (tetris[i].pInitAI) {
+							AIDLL::Config c = {
+								ai[i].level,
+								rule.season,
+								rule.multiplier,
+								rule.GarbageCap,
+								tetris[i].hold,
+								rule.clutch,
+								rule.lockout,
+								rule.spin180
+							};
+							tetris[i].pInitAI(&c);
+						}
 					}
 					ply.start();
 					if (player.sound_bgm) GameSound::ins().loadBGM(rnd);

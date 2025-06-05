@@ -12,7 +12,6 @@ namespace AIDLL {
 		char next[NEXT_SIZE];
 		char hold;
 		char active;
-		bool canHold;
 		bool curCanHold;
 		int x;
 		int y;
@@ -26,11 +25,15 @@ namespace AIDLL {
 	struct Config {
 		int level;
 		int season;
+		int multiplier;
+		int garbageCap;
+		bool canHold;
 		bool clutch;
 		bool lockout;
 		bool allow180;
 	};
-	typedef const char* (*CALL_TETRISAI)(const Field *field, const Queue *queue, const Status *status, const Config *config);
+	typedef void (*CALL_INITAI)(const Config* config);
+	typedef const char* (*CALL_TETRISAI)(const Field *field, const Queue *queue, const Status *status);
 	typedef const char* (*CALL_AINAME)(int level);
 	typedef int (*CALL_DLLVERSION)();
 }
