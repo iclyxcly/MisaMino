@@ -217,60 +217,6 @@ void tetris_draw(const TetrisGame& tetris, const RP::PlayerManager mgr, bool sho
 		);
 	}
 
-	// ghost
-	if (tetris.alive() && tetris.m_cur.num) {
-		int dy = 0;
-		if (!tetris.m_pool.isCollide(tetris.m_cur_x, tetris.m_cur_y + dy, tetris.m_cur)) {
-			while (!tetris.m_pool.isCollide(tetris.m_cur_x, tetris.m_cur_y + dy + 1, tetris.m_cur)) {
-				++dy;
-			}
-		}
-		if (dy > 0) {
-			//setlinewidth(3);
-			setfillcolor(hsv2rgb(gemColor[tetris.m_cur.num], gemColorS, 0.6f));
-			//setcolor(EGERGB(0xcf, 0x4f, 0xcf));
-			for (int y = 0; y < 4; ++y) {
-				for (int x = 0; x < 4; ++x) {
-					if (y + dy + tetris.cury() <= 0) continue;
-					if (tetris.getCurGemCell(x, y)) {
-						int bx = int(base_x + size_x * (x + tetris.curx() + 5));
-						int by = int(base_y_ + size_y * (y + dy + tetris.cury() + 2));
-						int bw = size_x;
-						int bh = size_y;
-						//putimage(bx, by, pool_gem_dark[tetris.m_cur.num]);
-						if (x == 0 || tetris.getCurGemCell(x - 1, y) == 0) { //L
-							bar(bx, by, bx + 3, by + bh);
-						}
-						if (y == 0 || tetris.getCurGemCell(x, y - 1) == 0) { //T
-							bar(bx, by, bx + bw, by + 3);
-						}
-						if (x == 3 || tetris.getCurGemCell(x + 1, y) == 0) { //R
-							bar(bx + bw - 3, by, bx + bw, by + bh);
-						}
-						if (y == 3 || tetris.getCurGemCell(x, y + 1) == 0) { //B
-							bar(bx, by + bh - 3, bx + bw, by + bh);
-						}
-						bar(bx, by, bx + 3, by + 3);
-						bar(bx + bw - 3, by, bx + bw, by + 3);
-						bar(bx + bw - 3, by + bh - 3, bx + bw, by + bh);
-						bar(bx, by + bh - 3, bx + 3, by + bh);
-					}
-				}
-			}
-			//setlinewidth(1);
-		}
-		int trigger_y = tetris.poolh() - AI::gem_add_y + 3;
-		if (tetris.m_cur_y + dy < trigger_y) {
-			setcolor(EGERGB(255, 255, 0));
-			setlinestyle(DOTTED_LINE);
-			int x = int(base_x + size_x * 5);
-			int bx = int(base_x + size_x * (10 + 5));
-			int by = int(base_y_ + size_y * trigger_y);
-			line(x, by, bx, by);
-			setlinestyle(SOLID_LINE);
-		}
-	}
-
 	// spawn mino
 	for (int y = 0; y < 4; ++y) {
 		for (int x = 0; x < 4; ++x) {
@@ -327,6 +273,62 @@ void tetris_draw(const TetrisGame& tetris, const RP::PlayerManager mgr, bool sho
 				lastby = by;
 			}
 			setlinestyle(SOLID_LINE);
+		}
+	}
+
+	// ghost
+	if (tetris.alive() && tetris.m_cur.num) {
+		int dy = 0;
+		if (!tetris.m_pool.isCollide(tetris.m_cur_x, tetris.m_cur_y + dy, tetris.m_cur)) {
+			while (!tetris.m_pool.isCollide(tetris.m_cur_x, tetris.m_cur_y + dy + 1, tetris.m_cur)) {
+				++dy;
+			}
+		}
+		if (dy > 0) {
+			//setlinewidth(3);
+			setfillcolor(hsv2rgb(gemColor[tetris.m_cur.num], gemColorS, 0.6f));
+			//setcolor(EGERGB(0xcf, 0x4f, 0xcf));
+			for (int y = 0; y < 4; ++y) {
+				for (int x = 0; x < 4; ++x) {
+					if (y + dy + tetris.cury() <= 0) continue;
+					if (tetris.getCurGemCell(x, y)) {
+						int bx = int(base_x + size_x * (x + tetris.curx() + 5));
+						int by = int(base_y_ + size_y * (y + dy + tetris.cury() + 2));
+						int bw = size_x;
+						int bh = size_y;
+						//putimage(bx, by, pool_gem_dark[tetris.m_cur.num]);
+						if (x == 0 || tetris.getCurGemCell(x - 1, y) == 0) { //L
+							bar(bx, by, bx + 3, by + bh);
+						}
+						if (y == 0 || tetris.getCurGemCell(x, y - 1) == 0) { //T
+							bar(bx, by, bx + bw, by + 3);
+						}
+						if (x == 3 || tetris.getCurGemCell(x + 1, y) == 0) { //R
+							bar(bx + bw - 3, by, bx + bw, by + bh);
+						}
+						if (y == 3 || tetris.getCurGemCell(x, y + 1) == 0) { //B
+							bar(bx, by + bh - 3, bx + bw, by + bh);
+						}
+						bar(bx, by, bx + 3, by + 3);
+						bar(bx + bw - 3, by, bx + bw, by + 3);
+						bar(bx + bw - 3, by + bh - 3, bx + bw, by + bh);
+						bar(bx, by + bh - 3, bx + 3, by + bh);
+					}
+				}
+			}
+			//setlinewidth(1);
+		}
+		if (rule.lockout) {
+			int trigger_y = tetris.poolh() - AI::gem_add_y + 3;
+			if (tetris.m_cur_y + dy < trigger_y) {
+				setcolor(EGERGB(255, 255, 0));
+				setlinestyle(DOTTED_LINE);
+				int x = int(base_x + size_x * 5);
+				int bx = int(base_x + size_x * (10 + 5));
+				int by = int(base_y_ + size_y * trigger_y);
+				line(x, by, bx, by);
+				setlinestyle(SOLID_LINE);
+			}
 		}
 	}
 	{
