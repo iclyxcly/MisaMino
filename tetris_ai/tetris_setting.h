@@ -12,4 +12,4 @@
 #define AI_TRAINING_0       9
 #define AI_TRAINING_2       6
 
-#define AI_DLL_VERSION      2 // dll°æ±¾
+#define AI_DLL_VERSION      3 // dll°æ±¾

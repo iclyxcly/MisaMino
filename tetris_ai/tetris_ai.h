@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <vector>
+#include "ai_dll.h"
 
 namespace AI {
     struct Moving
@@ -232,19 +233,20 @@ namespace AI {
         int dif_factor; //Æ«²îÖµ
         int strategy_4w;
     };
-    typedef char* (*AIName_t)( int level );
-    typedef char* (*TetrisAI_t)(int overfield[], int field[], int field_w, int field_h, int b2b, int combo,
-               char next[], char hold, bool curCanHold, char active, int x, int y, int spin,
-               bool canhold, bool can180spin, int upcomeAtt, int comboTable[], int maxDepth, int level, int player);
     void setComboList( std::vector<int> combolist );
     int getComboAttack( int combo );
-    void setSpin180( bool enable );
+    void setSpin180(bool enable);
     bool spin180Enable();
+    void setLockOut(bool enable);
+    bool isLockOutEnable();
+    void setClutch(bool enable);
+    bool isClutchEnable();
+    void setMultiplier(int mul);
+    bool getMultiplier();
     void setAIsettings(int player, const char* key, int val);
 
     void GenMoving(const GameField& field, std::vector<MovingSimple> & movs, Gem cur, int x, int y, bool hold);
     void FindPathMoving(const GameField& field, std::vector<Moving> & movs, Gem cur, int x, int y, bool hold);
-    MovingSimple AISearch(AI_Param ai_param, const GameField& pool, int hold, Gem cur, int x, int y, const std::vector<Gem>& next, bool canhold, int upcomeAtt, int maxDeep, int & searchDeep, int level);
-    int RunAI(Moving& ret_mov, int& flag, const AI_Param& ai_param, const GameField& pool, int hold, Gem cur, int x, int y, const std::vector<Gem>& next, bool canhold, int upcomeAtt, int maxDeep, int & searchDeep, int level, int player);
-    int RunAIDll(TetrisAI_t func, Moving& ret_mov, int& flag, const AI_Param& ai_param, const GameField& pool, int hold, Gem cur, int x, int y, const std::vector<Gem>& next, bool canhold, int upcomeAtt, int maxDeep, int & searchDeep, int level, int player);
+    int RunAI(Moving& ret_mov, int& flag, const AI_Param& ai_param, const GameField& pool, int hold, Gem cur, int x, int y, const std::vector<Gem>& next, bool canhold, bool canAMini, int upcomeAtt, int maxDeep, int & searchDeep, int level, int player);
+    int RunAIDll(const AIDLL::CALL_TETRISAI &func, Moving& ret_mov, int& flag, const GameField& pool, int hold, Gem cur, int x, int y, const std::vector<Gem>& next, bool canhold, std::array<int, AIDLL::UPCOMEATT_SIZE> upcomeAtt, int& searchDeep, int level);
 }

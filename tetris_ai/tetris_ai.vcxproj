@@ -138,6 +138,7 @@
     <ClCompile Include="tetris_gem.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ai_dll.h" />
     <ClInclude Include="gamepool.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="Profile.h" />

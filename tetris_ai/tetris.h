@@ -79,9 +79,11 @@ namespace AI {
             waiting = false;
             m_clearLines = 0;
             m_clearGarbageLines = 0;
+            m_garbage_height = 0;
             m_attack = 0;
             m_max_combo = 0;
             m_clear_info.reset( 0 );
+            m_lockout_warning = false;
             memset( m_color_pool, 0, sizeof( m_color_pool ) );
         }
         bool tryXMove(int dx) {
@@ -157,9 +159,13 @@ namespace AI {
                 m_cur_y = AI::gem_beg_y;
                 m_cur = AI::getGem(hold, 0);
             }
-            if ( m_pool.isCollide(m_cur_x, m_cur_y, m_cur)) {
-                m_state = STATE_OVER;
-                return true;
+            if (m_pool.isCollide(m_cur_x, m_cur_y, m_cur)) {
+                if (AI::isClutchEnable() && m_pool.combo) {
+                    while (m_pool.isCollide(m_cur_x, --m_cur_y, m_cur));
+                }
+                else {
+                    m_state = STATE_OVER;
+                }
             }
             return true;
         }
@@ -180,8 +186,12 @@ namespace AI {
                 m_cur = AI::getGem(hold, 0);
             }
             if (m_pool.isCollide(m_cur_x, m_cur_y, m_cur)) {
-                m_state = STATE_OVER;
-                return true;
+                if (AI::isClutchEnable() && m_pool.combo) {
+                    while (m_pool.isCollide(m_cur_x, --m_cur_y, m_cur));
+                }
+                else {
+                    m_state = STATE_OVER;
+                }
             }
             return true;
         }
@@ -209,7 +219,9 @@ namespace AI {
                 for (int i = 2; i < 4; i++) {
                     if (m_cur.bitmap[i]) low = i-1;
                 }
-                if (m_cur_y + low <= 1) m_state = STATE_OVER;
+                if (m_cur_y + low <= 1) {
+                    m_lockout_warning = true;
+                }
             }
             m_cur = AI::getGem(0, 0);
             return true;
@@ -218,13 +230,9 @@ namespace AI {
             int dy = 63;
             for ( int y = dy; y >= 0; --y ) {
                 int x = 0;
-                bool garbageLine = false;
                 for ( ; x < poolw(); ++x ) {
-                    garbageLine |= (m_color_pool[y][x] == 8);
                     if ( m_color_pool[y][x] == 0 ) break;
                 }
-                bool lineClear = !(x < poolw());
-                m_clearGarbageLines += (garbageLine && lineClear) ? 1 : 0;
                 if ( x < poolw() ) {
                     if ( dy != y ) {
                         for (x = 0 ; x < poolw(); ++x ) {
@@ -242,9 +250,15 @@ namespace AI {
         }
         void clearLines (int mul) {
             if ( m_state != STATE_PASTED ) return;
-            m_clearLines = m_pool.clearLines( wallkick_spin );
+            int last_height = m_garbage_height;
+            m_clearLines = m_pool.clearLines( m_garbage_height );
+            if (m_clearLines) {
+                if (last_height > m_garbage_height) {
+                    m_clearGarbageLines += last_height - m_garbage_height;
+                }
+            }
             color_pool_clearLines();
-            m_attack = m_pool.getAttack( m_clearLines, wallkick_spin, mul );
+            m_attack = m_pool.getAttack( m_clearLines, wallkick_spin, &m_split_attack, mul );
             m_max_combo = std::max(m_max_combo, m_pool.combo - 1);
 
             m_clear_info.clears = m_clearLines;
@@ -311,6 +325,14 @@ namespace AI {
                 ++m_clear_info.normal[m_clearLines];
             }
 
+            if ((!AI::isClutchEnable() || !m_clearLines) && m_lockout_warning) {
+                m_state = STATE_OVER;
+                return;
+            }
+            else {
+                m_lockout_warning = false;
+            }
+
             m_state = STATE_READY;
         }
         void addRow( int att ) {
@@ -332,9 +354,6 @@ namespace AI {
             if ( m_cur_y > 1 ) {
                 m_cur_y -= 1;
             }
-            if ( m_pool.m_row[0] ) {
-                m_state = STATE_OVER;
-            }
         }
         void setRow( int y, int att ) {
             {
@@ -349,7 +368,7 @@ namespace AI {
             m_pool.row[y] = att;
         }
         void removeNext() {
-            m_next.pop_front();
+            m_next.erase(m_next.begin());
             while (m_next.size() < 100)
                 genNext();
             //m_next[15] = AI::getGem( m_rand.randint(7) + 1, 0);
@@ -366,7 +385,13 @@ namespace AI {
             removeNext();
             //if ( m_pool.row[0] || m_pool.row[1] || m_pool.isCollide(m_cur_x, m_cur_y, m_cur)) {
             if ( m_pool.isCollide(m_cur_x, m_cur_y, m_cur) ) {
-                m_state = STATE_OVER;
+                if (AI::isClutchEnable() && m_pool.combo) {
+                    m_state = STATE_MOVING;
+                    while (m_pool.isCollide(m_cur_x, --m_cur_y, m_cur));
+                }
+                else {
+                    m_state = STATE_OVER;
+                }
                 return true;
             }
             m_state = STATE_MOVING;
@@ -428,13 +453,16 @@ namespace AI {
         int m_hold;
         int m_cur_x, m_cur_y;
         int m_curnum;
+        int m_garbage_height;
+        int m_lockout_warning;
         bool waiting;
         signed char wallkick_spin;
-        std::deque<AI::Gem> m_next;
+        std::vector<AI::Gem> m_next;
         point m_base, m_size;
         int m_clearLines;
         int m_clearGarbageLines;
         int m_attack;
+        bool m_split_attack;
         int m_max_combo;
         clear_info m_clear_info;
     };

@@ -27,6 +27,8 @@ namespace AI {
     std::vector<int> g_combo_attack;
     bool g_allSpin = false;
     bool g_lockOut = false;
+    bool g_clutch = true;
+    int multiplier = 1;
     bool g_softdrop = true;
     //bool g_softdrop = false;
 
@@ -42,6 +44,20 @@ namespace AI {
     }
     bool isLockOutEnable() {
         return g_lockOut;
+    }
+
+    void setClutch(bool enable) {
+        g_clutch = enable;
+    }
+    bool isClutchEnable() {
+        return g_clutch;
+    }
+
+    void setMultiplier(int mul) {
+        multiplier = mul;
+    }
+    bool getMultiplier() {
+        return multiplier;
     }
 
 

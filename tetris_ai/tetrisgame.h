@@ -41,6 +41,7 @@ struct tetris_rule {
 	int GarbageCap;
 	int GarbageSpeed;
 	int lockout;
+	int clutch;
 	int multiplier;
 	int next;
 	int turn;
@@ -55,6 +56,7 @@ struct tetris_rule {
 		next = 6;
 		multiplier = 1;
 		lockout = 0;
+		clutch = 1;
 		turn = 1;
 	}
 };
@@ -345,28 +347,25 @@ public:
 		accept_atts.push_back({ n, f, rowdata });
 		return rowdata;
 	}
-	void acceptAttack(int attack = 100) {
-		int att[2] = { 0 };
-		for (int i = 0; i < 32; i += 2) {
-			att[0] |= 1 << i;
-		}
-		att[0] &= m_pool.m_w_mask;
-		att[1] = ~att[0] & m_pool.m_w_mask;
-		atk_t n = accept_atts.front();
-		int rowdata = n.pos;
-        /*
-        int rowdata = m_randatt.randint( m_pool.m_w );
-        while ( m_last_hole_x == rowdata ) {
-            rowdata = m_randatt.randint( m_pool.m_w );
-        }*/
-        m_last_hole_x = rowdata;
+	void acceptAttack(int cap, int targetFrame) {
+		while (!accept_atts.empty() && accept_atts.front().frame <= targetFrame) {
+			if (cap == 0) break;
+			auto& front = accept_atts.front();
+			int recv = std::min<int>(cap, front.atk);
+			cap -= recv;
+			front.atk -= recv;
 
-		rowdata = ~(1 << rowdata) & m_pool.m_w_mask;
-		if (attack < n.atk)
-			n.atk = attack;
-		for (; n.atk > 0; --(n.atk)) {
-			addRow(rowdata);
-			++total_accept_atts;
+			int rowdata = front.pos;
+			m_last_hole_x = rowdata;
+			rowdata = ~(1 << rowdata) & m_pool.m_w_mask;
+			m_garbage_height += recv;
+			for (; recv > 0; --recv) {
+				addRow(rowdata);
+				++total_accept_atts;
+			}
+			if (!front.atk) {
+				accept_atts.erase(accept_atts.begin());
+			}
 		}
 		if (alive()) {
 			if (m_pool.isCollide(m_cur_x, m_cur_y, m_cur)) {
@@ -398,8 +397,8 @@ public:
 	int ai_movs_flag;
 	int ai_last_deep;
 	int ai_delay;
-	AI::AIName_t pAIName;
-	AI::TetrisAI_t pTetrisAI;
+	AIDLL::CALL_AINAME pAIName;
+	AIDLL::CALL_TETRISAI pTetrisAI;
 	int env_change;
 	int n_pieces;
 	std::vector<atk_t> accept_atts;

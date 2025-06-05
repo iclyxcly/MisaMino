@@ -29,6 +29,7 @@ namespace AI {
 	struct GameField {
 		signed char m_w, m_h;
 		unsigned short combo;
+		bool garbage_clear;
 		unsigned b2b;
 		short x_before_spin;
 		short y_before_spin;
@@ -310,44 +311,31 @@ namespace AI {
 			}
 		}
 		signed char isWallKickSpin(int x, int y, const Gem& gem) const {
-			if (isEnableAllSpin()) {
-				if (isCollide(x - 1, y, gem)
-					&& isCollide(x + 1, y, gem)
-					&& isCollide(x, y - 1, gem)) {
-					return 1;
-				}
+			if (gem.num == 2) { //T
+				int cnt = 0;
+				if (x < 0 || (row[y] & (1 << x))) ++cnt;
+				if (x < 0 || y + 2 > m_h || (row[y + 2] & (1 << x))) ++cnt;
+				if (x + 2 >= m_w || (row[y] & (1 << (x + 2)))) ++cnt;
+				if (x + 2 >= m_w || y + 2 > m_h || (row[y + 2] & (1 << (x + 2)))) ++cnt;
+				if (cnt >= 3) return cnt;
 			}
-			else {
-				if (gem.num == 2) { //T
-					int cnt = 0;
-					if (x < 0 || (row[y] & (1 << x))) ++cnt;
-					if (x < 0 || y + 2 > m_h || (row[y + 2] & (1 << x))) ++cnt;
-					if (x + 2 >= m_w || (row[y] & (1 << (x + 2)))) ++cnt;
-					if (x + 2 >= m_w || y + 2 > m_h || (row[y + 2] & (1 << (x + 2)))) ++cnt;
-					if (cnt >= 3) return cnt;
-				}
+			if (isEnableAllSpin() &&
+				isCollide(x - 1, y, gem)
+				&& isCollide(x + 1, y, gem)
+				&& isCollide(x, y - 1, gem)) {
+				return 1;
 			}
 			return 0;
 		}
 		signed char WallKickValue(int gem_num, int x, int y, int spin, signed char wallkick_spin) const {
 			const signed char kick_val = isWallKickSpin(x, y, getGem(gem_num, spin));
-			if (!kick_val || wallkick_spin == 0) {
-				return wallkick_spin = 0;
+			if (!kick_val || (gem_num == 2 && !wallkick_spin)) {
+				return 0;
 			}
-			if (isEnableAllSpin()) {
-				if (wallkick_spin == 2) {
-					wallkick_spin = 1;
-					Gem g = getGem(gem_num, spin);
-					for (int dy = 0; dy < 4; ++dy) { //KOS mini test
-						if (g.bitmap[dy] == 0) continue;
-						if (((g.bitmap[dy] << x) | row[y + dy]) == m_w_mask) continue;
-						wallkick_spin = 2;
-						break;
-					}
-				}
+			else if (kick_val == 1) {
+				return 4;
 			}
-			else {
-				wallkick_spin = 1;
+			wallkick_spin = 1;
 				Gem g = getGem(gem_num, spin);
 				signed char back_x = spin == 1 ? (x - 1) : (x + 1);
 				const signed char offset_x = x - x_before_spin;
@@ -364,11 +352,12 @@ namespace AI {
 				else if (offset_x == 0 && offset_y == -2 && spin_dir == (spin == 3 ? 1 : 3) && !isCollide(x, y - 1, g)) { // polymer t2 mini
 					wallkick_spin = 2;
 				}
-			}
 			return wallkick_spin;
 		}
-		int clearLines(signed char _wallkick_spin) {
+		int clearLinesEv() {
 			int clearnum = 0;
+			garbage_clear = false;
+			// m_h is 20
 			int h2 = m_h;
 			for (int h = m_h; h >= -gem_add_y; --h) {
 				if (row[h] != m_w_mask) {
@@ -381,21 +370,32 @@ namespace AI {
 			for (int h = h2; h >= -gem_add_y; --h) {
 				row[h] = 0;
 			}
-			if (clearnum > 0) {
-				++combo;
-				if (clearnum == 4) {
-					++b2b;
-				}
-				else if (_wallkick_spin > 0) {
-					++b2b;
-				}
-				else {
-					b2b = 0;
+			hashval = hash(*this);
+			return clearnum;
+		}
+		int clearLines(int &garbage_height) {
+			int clearnum = 0;
+			int gclear = 0;
+			// m_h is 20
+			int h2 = m_h;
+			for (int h = m_h; h >= -gem_add_y; --h) {
+				if (row[h] == m_w_mask) {
+					if (m_h - h < garbage_height) {
+						++gclear;
+					}
+					++clearnum;
 				}
 			}
-			else {
-				combo = 0;
+			for (int h = m_h; h >= -gem_add_y; --h) {
+				if (row[h] != m_w_mask) {
+					row[h2--] = row[h];
+				}
 			}
+			for (int h = h2; h >= -gem_add_y; --h) {
+				row[h] = 0;
+			}
+			garbage_clear = gclear > 0;
+			garbage_height -= gclear;
 			hashval = hash(*this);
 			return clearnum;
 		}
@@ -406,67 +406,102 @@ namespace AI {
 			while (f > 1) f--;
 			return f;
 		}
-		int getAttack(int clearfull, signed char wallkick, int mul) {
-			int base_atk = 0, attack = 0;
-			if (clearfull == 0) return 0;
-			m_pc_att = 10;
+		int getAttack(int clearfull, signed char wallkick, bool *split_attack, int mul) {
+			if (split_attack != nullptr) {
+				*split_attack = false;
+			}
+			int attack = 0;
+			int surge = 0;
 			double raw = 0;
+			int roof = gem_add_y + m_h;
+			for (; roof >= 0; --roof) {
+				if (m_row[roof]) break;
+			}
+			if (clearfull) {
+				++combo;
+				if (wallkick || clearfull == 4) {
+					if (isEnableAllSpin() && b2b > 0) {
+						++raw;
+					}
+					++b2b;
+				}
+				else if (isEnableAllSpin() && roof < 0) {
+					++b2b;
+				}
+				else {
+					if (isEnableAllSpin() && b2b > 4) {
+						if (split_attack != nullptr) {
+							*split_attack = true;
+						}
+						surge += b2b - 1;
+					}
+					b2b = 0;
+				}
+			}
+			else {
+				combo = 0;
+			}
+			if (clearfull == 0) return 0;
+			m_pc_att = isEnableAllSpin() ? 5 : 10;
 			// wallkick 2 = mini
 			switch (clearfull) {
 			case 0:
 				break;
 			case 1:
 				switch (wallkick) {
-				case 0:
-				case 2:
-				case 3:
+				case 1:
+					raw += 2;
 					break;
 				default:
-					raw = 2;
 					break;
 				}
 				break;
 			case 2:
 				switch (wallkick) {
 				case 0:
-					raw = 1;
+				case 4:
+					raw += 1;
+					break;
+				case 1:
+				case 3:
+					raw += 4;
 					break;
 				case 2:
-					raw = 2;
+					raw += 2;
 					break;
-				case 3:
 				default:
-					raw = 4;
 					break;
 				}
 				break;
 			case 3:
 				switch (wallkick) {
 				case 0:
-					raw = 2;
+				case 2:
+				case 4:
+					raw += 2;
 					break;
 				default:
-					raw = 6;
+					raw += 6;
 					break;
 				}
 				break;
 			case 4:
-				raw = 4;
+				raw += 4;
 				break;
 			}
-			if (b2b > 1) {
+			if (!isEnableAllSpin() && b2b > 1) {
 				double b = b2b - 1;
 				raw += (floor(1 + log1p((b) * 0.8)) + (b == 1 ? 0 : (1 + mod1(log1p(b * 0.8))) / 3));
 			}
 			double c = combo - 1;
 			raw *= (1 + 0.25 * c);
-			if (c > 1) raw = std::max(log1p(1.25 * c), raw);
-			attack = floor(raw * mul);
-			int i = gem_add_y + m_h;
-			for (; i >= 0; --i) {
-				if (m_row[i]) break;
+			if (c > 1) {
+				raw = std::max(log1p(1.25 * c), raw);
 			}
-			if (i < 0) {
+			attack = floor(raw * mul);
+			attack += isEnableAllSpin() && clearfull && (wallkick || clearfull == 4) && garbage_clear;
+			attack += surge * mul;
+			if (roof < 0) {
 				attack += m_pc_att * mul; // pc
 			}
 			return attack;

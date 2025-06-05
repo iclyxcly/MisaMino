@@ -102,7 +102,7 @@ namespace RP {
 	struct Stats {
 		float apm, pps, vs;
 		Stats(const float& a, const float& p, const float& v) : apm(a), pps(p), vs(v) {}
-		Stats() {}
+		Stats() : apm(0.0f), pps(0.0f), vs(0.0f) {}
 		json build() const {
 			json ret;
 			ret["apm"] = apm;
@@ -150,10 +150,11 @@ namespace RP {
 			ret["hasgarbage"] = true;
 			ret["bgmnoreset"] = true;
 			ret["neverstopbgm"] = true;
-			ret["clutch"] = false;
+			ret["clutch"] = !!rule.clutch;
 			ret["spinbonuses"] = "all-mini+";
 			ret["garbagespeed"] = rule.GarbageSpeed;
 			ret["garbagecap"] = rule.GarbageCap;
+			ret["garbagemultiplier"] = rule.multiplier;
 			ret["forfeit_time"] = 150;
 			ret["locktime"] = 999999999;
 			ret["infinite_movement"] = true;
@@ -165,7 +166,7 @@ namespace RP {
 			ret["allclear_b2b"] = 1;
 			ret["allclear_b2b_sends"] = true;
 			ret["allclear_b2b_dupes"] = false;
-			ret["nolockout"] = rule.lockout == 0;
+			ret["nolockout"] = !rule.lockout;
 			ret["noextrawidth"] = true;
 			ret["garbagespecialbonus"] = true;
 			ret["song"] = "none";
@@ -197,7 +198,7 @@ namespace RP {
 			ret["hasgarbage"] = true;
 			ret["bgmnoreset"] = true;
 			ret["neverstopbgm"] = true;
-			ret["clutch"] = false;
+			ret["clutch"] = !!rule.clutch;
 			ret["garbagespeed"] = rule.GarbageSpeed;
 			ret["garbagecap"] = rule.GarbageCap;
 			ret["garbagemultiplier"] = rule.multiplier;
@@ -212,7 +213,7 @@ namespace RP {
 			ret["b2bcharge_base"] = 3;
 			ret["allclear_b2b_sends"] = true;
 			ret["allclear_b2b_dupes"] = false;
-			ret["nolockout"] = rule.lockout == 0;
+			ret["nolockout"] = !rule.lockout;
 			ret["noextrawidth"] = true;
 			ret["song"] = "none";
 			ret["latencymode"] = "low";
@@ -345,19 +346,30 @@ namespace RP {
 		int size() const {
 			return events.size();
 		}
-		void slice() {
+		void slice(const bool &clearIGE) {
 			if (commits <= 1) {
-				discardAll();
+				if (clearIGE) {
+					discardAll();
+				}
+				else {
+					discard();
+				}
 				return;
 			}
 			while (!events.empty()) {
 				if (events.back().type == EventType::checkpoint) {
+					--commits;
 					events.pop_back();
 					break;
 				}
 				events.pop_back();
 			}
-			discardAll();
+			if (clearIGE) {
+				discardAll();
+			}
+			else {
+				discard();
+			}
 		}
 		void reset() {
 			events.clear();
@@ -469,9 +481,6 @@ namespace RP {
 		json buildLb(const u32& matches) const {
 			return Leaderboard::build(self, computeAvg(matches), wins);
 		}
-		json computeStats(const u32& matches) const {
-			return computeAvg(matches).build();
-		}
 		int eventSize() const {
 			return rp.size();
 		}
@@ -494,8 +503,8 @@ namespace RP {
 				rp.commit();
 			}
 		}
-		void undo() {
-			rp.slice();
+		void undo(const bool &clearIGE) {
+			rp.slice(clearIGE);
 		}
 		void recvAttack(const u32& frame, const  u16& amt, const  u8& pos) {
 			for (auto& data : ige.raw(frame, amt, pos)) {
@@ -638,8 +647,8 @@ namespace RP {
 		}
 		void undo() {
 			frames = lastHarddropFrames;
-			p[0].undo();
-			p[1].undo();
+			p[0].undo(false);
+			p[1].undo(true);
 		}
 		void clearCurrentMove(const int& idx) {
 			p[idx].clearCurrentMove();

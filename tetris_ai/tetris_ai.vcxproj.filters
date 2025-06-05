@@ -44,9 +44,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="tetris_gem.h">
-      <Filter>ai</Filter>
-    </ClInclude>
     <ClInclude Include="gamepool.h">
       <Filter>ai</Filter>
     </ClInclude>
@@ -79,6 +76,12 @@
     </ClInclude>
     <ClInclude Include="Replay.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tetris_gem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ai_dll.h">
+      <Filter>ai</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

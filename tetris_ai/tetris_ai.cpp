@@ -3,13 +3,15 @@
 #include <deque>
 #include <map>
 #include <set>
-
+#include <thread>
 #include "tetris_setting.h"
 #include <assert.h>
+#include <array>
 
 #define GENMOV_W_MASK   15
 #define GEN_MOV_NO_PUSH 0
-
+#undef min
+#undef max
 namespace AI {
     enum {
         MOV_SCORE_DROP = 1,
@@ -25,12 +27,10 @@ namespace AI {
         bool hash;
         bool combo;
         bool strategy_4w;
-        int multiplier;
         _ai_settings() {
             hash = true;
             combo = true;
             strategy_4w = false;
-            multiplier = 1;
         }
     } ai_settings[2];
 
@@ -41,9 +41,6 @@ namespace AI {
             ai_settings[player].combo = val;
         } else if ( strcmp(key, "4w") == 0 ) {
             ai_settings[player].strategy_4w = val;
-        }
-        else if (strcmp(key, "multiplier") == 0) {
-            ai_settings[player].multiplier = val;
         }
     }
 
@@ -516,9 +513,12 @@ namespace AI {
                 int s = 0;
                 int t_att = total_clear_att;
                 double t_clear = total_clears; //+ total_clears / 4.0;
-                if ( pool.b2b ) s -= 5; // b2b score
+                if ( pool.b2b ) s -= pool.b2b * 5; // b2b score
+                else if (last_pool.b2b) {
+                    s += (last_pool.b2b - pool.b2b) * 14;
+                }
                 if ( t_clear > 0 ) {
-                    s -= int( ((ai_param.clear_efficient) * ( t_att ) ) );
+                    s -= int( ((ai_param.clear_efficient) * ( t_att - t_clear ) ) );
                 }
                 {
                     //if ( t_clear > t_att ) {
@@ -542,6 +542,9 @@ namespace AI {
                     } else if ( wallkick_spin == 2 ) { // Tmini
                         cs -= int( warning_factor * (ai_param.tspin / 2) );
                     }
+                }
+                else if (isEnableAllSpin() && wallkick_spin && clears > 0 && ai_param.tspin > 0) {
+                    cs -= int(warning_factor * ai_param.tspin * clear_att);
                 }
                 clearScore += cs;
                 if (1)
@@ -1194,8 +1197,8 @@ namespace AI {
                 signed char wallkick_spin = it->wallkick_spin;
                 wallkick_spin = ms.pool_last.WallKickValue(cur.num, (*it).x, (*it).y, (*it).spin, wallkick_spin);
                 ms.pool_last.paste((*it).x, (*it).y, getGem(cur.num, (*it).spin));
-                int clear = ms.pool_last.clearLines( wallkick_spin );
-                int att = ms.pool_last.getAttack( clear, wallkick_spin, ai_settings[player].multiplier);
+                int clear = ms.pool_last.clearLinesEv( );
+                int att = ms.pool_last.getAttack( clear, wallkick_spin, nullptr, getMultiplier());
                 ms.player = player;
                 ms.clear = clear;
                 ms.att = att;
@@ -1254,8 +1257,8 @@ namespace AI {
                     signed char wallkick_spin = it->wallkick_spin;
                     wallkick_spin = ms.pool_last.WallKickValue(cur_num, (*it).x, (*it).y, (*it).spin, wallkick_spin);
                     ms.pool_last.paste((*it).x, (*it).y, getGem(cur_num, (*it).spin));
-                    int clear = ms.pool_last.clearLines( wallkick_spin );
-                    int att = ms.pool_last.getAttack( clear, wallkick_spin, ai_settings[player].multiplier);
+                    int clear = ms.pool_last.clearLinesEv( );
+                    int att = ms.pool_last.getAttack( clear, wallkick_spin, nullptr, getMultiplier());
                     ms.player = player;
                     ms.clear = clear;
                     ms.att = att;
@@ -1450,8 +1453,8 @@ namespace AI {
                             signed char wallkick_spin = movs[i].wallkick_spin;
                             wallkick_spin = ms.pool_last.WallKickValue(cur_num, movs[i].x, movs[i].y, movs[i].spin, wallkick_spin);
                             ms.pool_last.paste(movs[i].x, movs[i].y, getGem(cur_num, movs[i].spin));
-                            int clear = ms.pool_last.clearLines( wallkick_spin );
-                            int att = ms.pool_last.getAttack( clear, wallkick_spin, ai_settings[player].multiplier);
+                            int clear = ms.pool_last.clearLinesEv( );
+                            int att = ms.pool_last.getAttack( clear, wallkick_spin, nullptr, getMultiplier());
                             ms.player = player;
                             ms.clear = clear + ms_last.clear;
                             ms.att = att + ms_last.att;
@@ -1528,8 +1531,8 @@ namespace AI {
                                     signed char wallkick_spin = movs[i].wallkick_spin;
                                     wallkick_spin = ms.pool_last.WallKickValue(cur_num, movs[i].x, movs[i].y, movs[i].spin, wallkick_spin);
                                     ms.pool_last.paste(movs[i].x, movs[i].y, getGem(cur_num, movs[i].spin));
-                                    int clear = ms.pool_last.clearLines( wallkick_spin );
-                                    int att = ms.pool_last.getAttack( clear, wallkick_spin, ai_settings[player].multiplier);
+                                    int clear = ms.pool_last.clearLinesEv( );
+                                    int att = ms.pool_last.getAttack( clear, wallkick_spin, nullptr, getMultiplier());
                                     ms.player = player;
                                     ms.clear = clear + ms_last.clear;
                                     ms.att = att + ms_last.att;
@@ -1649,8 +1652,8 @@ namespace AI {
                             signed char wallkick_spin = movs[i].wallkick_spin;
                             wallkick_spin = ms.pool_last.WallKickValue(cur_num, movs[i].x, movs[i].y, movs[i].spin, wallkick_spin);
                             ms.pool_last.paste(movs[i].x, movs[i].y, getGem(cur_num, movs[i].spin));
-                            int clear = ms.pool_last.clearLines( wallkick_spin );
-                            int att = ms.pool_last.getAttack( clear, wallkick_spin, ai_settings[player].multiplier);
+                            int clear = ms.pool_last.clearLinesEv( );
+                            int att = ms.pool_last.getAttack( clear, wallkick_spin, nullptr, getMultiplier());
                             ms.player = player;
                             ms.clear = clear + ms_last.clear;
                             ms.att = att + ms_last.att;
@@ -1702,7 +1705,6 @@ namespace AI {
         }
     }
     struct AI_THREAD_PARAM {
-        TetrisAI_t func;
         Moving* ret_mov;
         int* flag;
         AI_Param ai_param;
@@ -1713,13 +1715,13 @@ namespace AI {
         int y;
         std::vector<Gem> next;
         bool canhold;
+        bool canAMini;
         int upcomeAtt;
         int maxDeep;
         int *searchDeep;
         int level;
         int player;
-        AI_THREAD_PARAM(TetrisAI_t _func, Moving& _ret_mov, int& _flag, const AI_Param& _ai_param, const GameField& _pool, int _hold, Gem _cur, int _x, int _y, const std::vector<Gem>& _next, bool _canhold, int _upcomeAtt, int _maxDeep, int & _searchDeep, int _level, int _player) {
-            func = _func;
+        AI_THREAD_PARAM(Moving& _ret_mov, int& _flag, const AI_Param& _ai_param, const GameField& _pool, int _hold, Gem _cur, int _x, int _y, const std::vector<Gem>& _next, bool _canhold, bool _canAMini, int _upcomeAtt, int _maxDeep, int & _searchDeep, int _level, int _player) {
             ret_mov = &_ret_mov;
             flag = &_flag;
             ai_param = _ai_param;
@@ -1730,6 +1732,7 @@ namespace AI {
             y = _y;
             next = _next;
             canhold = _canhold;
+            canAMini = _canAMini;
             upcomeAtt = _upcomeAtt;
             maxDeep = _maxDeep;
             searchDeep = &_searchDeep;
@@ -1813,42 +1816,15 @@ namespace AI {
         delete p;
         _endthread();
     }
-    int RunAI(Moving& ret_mov, int& flag, const AI_Param& ai_param, const GameField& pool, int hold, Gem cur, int x, int y, const std::vector<Gem>& next, bool canhold, int upcomeAtt, int maxDeep, int & searchDeep, int level, int player) {
+    int RunAI(Moving& ret_mov, int& flag, const AI_Param& ai_param, const GameField& pool, int hold, Gem cur, int x, int y, const std::vector<Gem>& next, bool canhold, bool canAMini, int upcomeAtt, int maxDeep, int & searchDeep, int level, int player) {
         flag = 0;
-        _beginthread(AI_Thread, 0, new AI_THREAD_PARAM(NULL, ret_mov, flag, ai_param, pool, hold, cur, x, y, next, canhold, upcomeAtt, maxDeep, searchDeep, level, player) );
+        _beginthread(AI_Thread, 0, new AI_THREAD_PARAM(ret_mov, flag, ai_param, pool, hold, cur, x, y, next, canhold, canAMini, upcomeAtt, maxDeep, searchDeep, level, player) );
         return 0;
     }
-    void AI_Thread_Dll( void* lpParam ) {
-        AI_THREAD_PARAM* p = (AI_THREAD_PARAM*)lpParam;
-        *p->flag = 1;
-        {
-            extern std::vector<int> g_combo_attack;
-            const GameField& gamefield = p->pool;
-            int overfield[32];
-            int field[32];
-            char next[32];
-            int comboTable[32];
-            char gemMap[] = " ITLJZSO";
-            for ( int iy = 0; iy <= gamefield.height(); ++iy ) {
-                field[iy] = gamefield.row[iy];
-            }
-            for ( int iy = 0; iy < 16; ++iy ) {
-                overfield[iy] = gamefield.row[-iy-1];
-            }
-            if ( p->maxDeep > 16 ) p->maxDeep = 16;
-            for ( int i = 0; i < p->maxDeep; ++i ) {
-                next[i] = gemMap[p->next[i].num];
-            }
-            for ( int i = 0; i < g_combo_attack.size(); ++i ) {
-                comboTable[i] = g_combo_attack[i];
-                if ( i + 1 == g_combo_attack.size() ) comboTable[i+1] = -1;
-            }
-
-            char* pOutStr = p->func(overfield, field, gamefield.width(), gamefield.height(), gamefield.b2b, gamefield.combo,
-                next, gemMap[gamefield.m_hold], !p->hold, gemMap[p->cur.num], p->x, p->y, p->cur.spin,
-                true, spin180Enable(), p->upcomeAtt, comboTable, p->maxDeep, p->level, p->player);
-            
-            std::map<char, int> outMap;
+    int RunAIDll(const AIDLL::CALL_TETRISAI &func, Moving& ret_mov, int& flag, const GameField& pool, int hold, Gem cur, int x, int y, const std::vector<Gem>& next, bool canhold, std::array<int, AIDLL::UPCOMEATT_SIZE> upcomeAtt, int & searchDeep, int level) {
+        flag = 0;
+        static std::map<char, int> outMap;
+        if (outMap.empty()) {
             outMap[' '] = AI::Moving::MOV_NULL;
             outMap['l'] = AI::Moving::MOV_L;
             outMap['r'] = AI::Moving::MOV_R;
@@ -1861,19 +1837,64 @@ namespace AI {
             outMap['c'] = AI::Moving::MOV_RSPIN;
             outMap['v'] = AI::Moving::MOV_HOLD;
             outMap['V'] = AI::Moving::MOV_DROP;
-            AI::Moving mov;
-            for ( ; *pOutStr; ++pOutStr ) {
-                mov.movs.push_back( outMap[*pOutStr] );
-            }
-            *p->ret_mov = mov;
         }
-        *p->flag = -1;
-        delete p;
-        _endthread();
-    }
-    int RunAIDll(TetrisAI_t func, Moving& ret_mov, int& flag, const AI_Param& ai_param, const GameField& pool, int hold, Gem cur, int x, int y, const std::vector<Gem>& next, bool canhold, int upcomeAtt, int maxDeep, int & searchDeep, int level, int player) {
-        flag = 0;
-        _beginthread(AI_Thread_Dll, 0, new AI_THREAD_PARAM(func, ret_mov, flag, ai_param, pool, hold, cur, x, y, next, canhold, upcomeAtt, maxDeep, searchDeep, level, player) );
+        static char gemMap[] = " ITLJZSO";
+        std::thread([=, &func, &ret_mov, &flag]() {
+            flag = 1;
+            using namespace AIDLL;
+            Field f{ {0}, pool.width()};
+            Queue q{ {}, gemMap[pool.m_hold], gemMap[cur.num], canhold, !hold, x, y, cur.spin};
+            Status s{ pool.b2b, pool.combo, {} };
+            Config c{ level, (int)isEnableAllSpin() + 1, isClutchEnable(), isLockOutEnable(), spin180Enable()};
+            for (int d = 0, s = pool.height(); d < FIELD_SIZE; ++d, --s) {
+                f.field[d] = pool.row[s];
+            }
+            {
+                const int maxSize = std::clamp(std::min<int>(next.size(), searchDeep), 0, NEXT_SIZE);
+                for (int i = 0; i < maxSize; ++i) {
+                    q.next[i] = gemMap[next[i].num];
+                }
+            }
+            memcpy(s.upcomeAtt, upcomeAtt.data(), sizeof(s.upcomeAtt));
+            //{
+            //    FILE* file = fopen("a.txt", "w");
+            //    if (file) {
+            //        for (int h = pool.height() + 2; h >= 0; --h) {
+            //            for (int w = 0; w < pool.width(); ++w) {
+            //                if ((f.field[h] >> w) & 1) {
+            //                    fprintf(file, "[]");
+            //                }
+            //                else {
+            //                    fprintf(file, "  ");
+            //                }
+            //            }
+            //            fprintf(file, "\n");
+            //        }
+            //        fprintf(file, "Queue:\n");
+            //        fprintf(file, " next: ");
+            //        for (int i = 0; i < NEXT_SIZE; ++i) fprintf(file, "%d ", (int)q.next[i]);
+            //        fprintf(file, "\n hold: %d\n active: %d\n canHold: %d\n curCanHold: %d\n x: %d\n y: %d\n r: %d\n\n",
+            //            (int)q.hold, (int)q.active, q.canHold, q.curCanHold, q.x, q.y, q.r);
+
+            //        // Print Status
+            //        fprintf(file, "Status:\n b2b: %d\n combo: %d\n upcomeAtt: ", s.b2b, s.combo);
+            //        for (int i = 0; i < UPCOMEATT_SIZE; ++i) fprintf(file, "%d ", s.upcomeAtt[i]);
+            //        fprintf(file, "\n\n");
+
+            //        // Print Config
+            //        fprintf(file, "Config:\n level: %d\n season: %d\n clutch: %d\n lockout: %d\n allow180: %d\n",
+            //            c.level, c.season, c.clutch, c.lockout, c.allow180);
+            //        fclose(file);
+            //    }
+            //}
+            const char* path = func(&f, &q, &s, &c);
+            ret_mov.movs.clear();
+            while (*path) {
+                ret_mov.movs.push_back(outMap[*path]);
+                ++path;
+            }
+            flag = -1;
+        }).detach();
         return 0;
     }
 
