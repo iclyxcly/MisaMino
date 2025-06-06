@@ -1,15 +1,15 @@
-#define PUBLIC_VERSION      1 // ·¢²¼Ä£Ê½
-#define GAMEMODE_4W         0 // 4wÄ£Ê½
+#define PUBLIC_VERSION      1 // å‘å¸ƒæ¨¡å¼
+#define GAMEMODE_4W         0 // 4wæ¨¡å¼
 #define AI_TRAINING_SLOW    0
 #define USE4W               1
-#define AI_SHOW             0 // ²»Ïà»¥¹¥»÷£¬Î§¹ÛAI
+#define AI_SHOW             0 // ä¸ç›¸äº’æ”»å‡»ï¼Œå›´è§‚AI
 #if AI_TRAINING_SLOW
 #define AI_TRAINING_DEEP    16
 #else
-#define AI_TRAINING_DEEP    6 // ÑµÁ·AIË¼¿¼Éî¶È
+#define AI_TRAINING_DEEP    6 // è®­ç»ƒAIæ€è€ƒæ·±åº¦
 #endif
 #define TRAINING_ROUND      20
 #define AI_TRAINING_0       9
 #define AI_TRAINING_2       6
 
-#define AI_DLL_VERSION      3 // dll°æ±¾
+#define AI_DLL_VERSION      3 // dllç‰ˆæœ¬

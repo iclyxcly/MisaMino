@@ -791,7 +791,7 @@ void mainscene() {
 			(AI_SHOW) ? (GAMEMODE_4W ? 2 : 16) : 0)
 		);
 	ai_mov_time /= 2; // fps=60
-	int ai_mov_time_base = 0; // 实际值由ai_mov_time决定，初始值不用管
+	int ai_mov_time_base = 0; // 瀹為檯鍊肩敱ai_mov_time鍐冲畾锛屽垵濮嬪�间笉鐢ㄧ
 
 	int player_key_state[8] = { 0 };
 	double player_sd_state = 0;
@@ -1576,7 +1576,7 @@ void mainscene() {
 				}
 				for (int i = 0; i < players_num; ++i) {
 					if (game[i]) {
-						if (att[i] > 0) { // 两行攻击
+						if (att[i] > 0) { // 涓よ鏀诲嚮
 							tetris[i].total_atts += att[i];
 							// first cancel garbage in the garbage buffer
 							while (att[i] > 0 && !tetris[i].accept_atts.empty()) {
@@ -1595,7 +1595,7 @@ void mainscene() {
 					--att[1];
 				}
 				for (int i = 0; i < players_num; ++i) {
-					if (game[i]) { // 游戏执行，如果丢下返回true
+					if (game[i]) { // 娓告垙鎵ц锛屽鏋滀涪涓嬭繑鍥瀟rue
 						tetris[i].env_change = 1;
 						tetris[i].n_pieces += 1;
 
@@ -1604,7 +1604,7 @@ void mainscene() {
 						tetris[i].m_clearLines = 0;
 						tetris[i].m_attack = 0;
 						tetris[i].clearSFX();
-						if (att[i] > 0) { // 两行攻击
+						if (att[i] > 0) { // 涓よ鏀诲嚮
 							// send garbage
 							if (att[i] > 0) {
 								for (int j = 0; j < players_num; ++j) {
@@ -1659,7 +1659,7 @@ void mainscene() {
 						tetris[i].waiting = tetris[i].n_pieces % rule.turn == 0;
 						tetris[!i].waiting = !tetris[i].waiting;
 					}
-					if (tetris[i].env_change && tetris[i].ai_movs_flag == -1 && ((rule.turnbase && !tetris[i].waiting) || !rule.turnbase)) { // AI 计算
+					if (tetris[i].env_change && tetris[i].ai_movs_flag == -1 && ((rule.turnbase && !tetris[i].waiting) || !rule.turnbase)) { // AI 璁＄畻
 						if ((ai_eve || ai[i].style) && tetris[i].alive()) {
 							double beg = (double)::GetTickCount() / 1000;
 							int deep = ai_search_height_deep;
@@ -1689,7 +1689,7 @@ void mainscene() {
 							else {
 								tetris[i].ai_delay = ai_first_delay;
 							}
-							if (tetris[i].env_change == 2) { // 被攻击就按已等待时间减少思索等待
+							if (tetris[i].env_change == 2) { // 琚敾鍑诲氨鎸夊凡绛夊緟鏃堕棿鍑忓皯鎬濈储绛夊緟
 								tetris[i].ai_delay = max(0, tetris[i].ai_delay - tetris[i].m_piecedelay);
 							}
 						}
